@@ -24,6 +24,7 @@ def main():
         if (CSV_FILENAME[-4::] != '.csv'):
                 CSV_FILENAME += '.csv'
         CSV_FILENAME = 'kesterEP256.csv' #! REMOVE
+
         # Open CSV and read into storage list pruning duplicate values
         with open(CSV_FILENAME, newline='') as csvfile:
                 csvreader = csv.reader(csvfile, delimiter=',')
@@ -39,8 +40,17 @@ def main():
         SETPOINT_LIST.sort(key=itemgetter(0)) #sorts based off of first element in inner tuple 
 
         # Create thread an start
-        T1 = threading.Thread(target=runGraph, name='T1', args=(LOCK,))
+        T1 = threading.Thread(target=runGraph, name='T1')
         T1.start()
+
+        startT = time.time()
+        while ((time.time() - startT) < 30):
+                LOCK.acquire()
+                XS_TMP.append((time.time() - startT)*5)
+                YS_TMP.append((time.time() - startT)*5)
+                LOCK.release()
+                time.sleep(0.1)
+
 
         time.sleep(10)
         T1.join()

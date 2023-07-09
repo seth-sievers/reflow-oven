@@ -9,7 +9,7 @@ import warnings
 
 # --------------------------------- RUNGRAPH --------------------------------- #
 # Based off of https://stackoverflow.com/questions/51949185/non-blocking-matplotlib-animation
-def runGraph(l):
+def runGraph():
         warnings.filterwarnings('ignore', module='graphing')
         # y_lim = max setpoint plus 10%, x_lim = max time plus 10%
         y_len = math.ceil((sorted(SETPOINT_LIST, key=itemgetter(1), reverse=True)[0][1])*1.1)
@@ -32,26 +32,29 @@ def runGraph(l):
         setpoint_line, = ax.plot(xs_sp, ys_sp, color='xkcd:purple', linestyle=':')
 
         #create temp line
+        LOCK.acquire()
         tmp_line, = ax.plot(XS_TMP, YS_TMP, color='xkcd:red', linestyle='solid')
+        LOCK.release()
 
         # labels
         plt.title('REFLOW TEMPERATURE')
         plt.xlabel('Time (s)')
         plt.ylabel('Temp (C)')
         setpoint_line.set_label('Target')
+        tmp_line.set_label('Actual')
         ax.legend(loc='upper left')
 
         # This function updates temp line with new data and is called by FuncAnimation()
         def animate(i):
-                XS_TMP.append(i*0.5)
-                YS_TMP.append(i*0.5)
+                LOCK.acquire()
                 tmp_line.set_xdata(XS_TMP)
                 tmp_line.set_ydata(YS_TMP)
+                LOCK.release()
                 return tmp_line,
 
         # Setup FuncAnimation
-        ani = animation.FuncAnimation(fig, animate, interval=10, blit=True,
-                                        cache_frame_data=False, frames=500)
+        ani = animation.FuncAnimation(fig, animate, interval=100, blit=True,
+                                        cache_frame_data=False)
         plt.show()
 
         return
