@@ -32,13 +32,6 @@ void SoftPWM::update()
                                 nextRunUS = lastRunUS + offPeriod; 
                                 break;
                 }
-
-                Serial.print(F("period is: "));
-                Serial.print(period);
-                Serial.print(F(" on Period is: "));
-                Serial.print(onPeriod);
-                Serial.print(F(" off Period is: "));
-                Serial.println(offPeriod); 
         }
         
         //PWM state machine 

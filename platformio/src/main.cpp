@@ -32,11 +32,11 @@ short STATE = 0;
 unsigned long int LAST_MESSAGE_MS = 0;  
 
 // Heater
-const unsigned short PWM_FREQ = 30; 
+const unsigned short PWM_FREQ = 2; 
 SoftPWM UPPER_HEATER_PWM(10, PWM_FREQ); 
 SoftPWM LOWER_HEATER_PWM(9, PWM_FREQ); 
 
-
+unsigned long DC = 0; 
 unsigned long int test_MS = 0; 
 /* -------------------------------------------------------------------------- */
 
@@ -70,9 +70,7 @@ void loop()
 {
         // Heater software PWM update (needs very low freq)
         UPPER_HEATER_PWM.update();
-        LOWER_HEATER_PWM.update(); 
-        //digitalWrite(10, HIGH);
-        
+        LOWER_HEATER_PWM.update();
 
         // Sample every 250ms and recompute temperatures
         if ((millis() - LAST_SAMPLE_MS) > 250){
@@ -94,7 +92,7 @@ void loop()
                         /* ---------------- //INITIALIZATION ---------------- */
                         //send READY signal and check for response
                         if ((millis() - LAST_MESSAGE_MS) > 100) {
-                                //Serial.println(F("READY")); 
+                                Serial.println(F("READY")); 
                                 LAST_MESSAGE_MS = millis(); 
                         }
                         if (Serial.available() > 0) {
