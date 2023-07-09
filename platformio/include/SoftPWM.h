@@ -18,14 +18,21 @@ class SoftPWM
                 void update();
 
                 // changes set PWM frequency
-                void setFreq(unsigned short freq); 
+                void setFreq(const unsigned short freq); 
 
                 // changes set PWM DC, 0 is true off
-                void setDC(float DC); 
+                void setDC(const float DC); 
 
         private: 
+                bool changed = true; 
                 unsigned short pin; 
                 unsigned short freq; 
+                unsigned short state = 1; 
+                float DutyCycle = 0; 
+                unsigned int period; 
+                unsigned int onPeriod; 
+                unsigned int offPeriod; 
+                unsigned long nextRunUS = 0; 
 };
 /* -------------------------------------------------------------------------- */
 
