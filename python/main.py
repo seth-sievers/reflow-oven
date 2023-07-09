@@ -43,16 +43,19 @@ def main():
         T1 = threading.Thread(target=runGraph, name='T1')
         T1.start()
 
-        startT = time.time()
-        while ((time.time() - startT) < 30):
-                LOCK.acquire()
-                XS_TMP.append((time.time() - startT)*5)
-                YS_TMP.append((time.time() - startT)*5)
-                LOCK.release()
-                time.sleep(0.1)
+        # Open the Serial Port and wait for 'READY'
+        ser = serial.Serial('COM3', 9600, timeout=0.25)
+        print('Waiting for Connection...', end='')
+        start_time = time.time()
+        while (ser.readline().decode('ASCII') != 'READY\r\n'):
+                if ((time.time() - start_time) > 15):
+                        print('TIMEOUT')
+                        break
+        else: 
+                print('READY')
 
+        ser.close()
 
-        time.sleep(10)
         T1.join()
         return
 # ---------------------------------------------------------------------------- #
