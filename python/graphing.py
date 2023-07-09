@@ -1,15 +1,16 @@
+from globals import *
+import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 from multiprocessing import Process
 from operator import itemgetter
-from globals import *
 import math
+
+
 
 # --------------------------------- RUNGRAPH --------------------------------- #
 # Based off of https://stackoverflow.com/questions/51949185/non-blocking-matplotlib-animation
 def runGraph():
-        print('Opening Plot')
-
         # y_lim = max setpoint plus 10%, x_lim = max time plus 10%
         y_len = math.ceil((sorted(SETPOINT_LIST, key=itemgetter(1), reverse=True)[0][1])*1.1)
         y_range = (20, y_len)
@@ -42,8 +43,6 @@ def runGraph():
 
         # This function updates temp line with new data and is called by FuncAnimation()
         def animate(i):
-                XS_TMP.append(0.5*i)
-                YS_TMP.append(0.5*i)
                 tmp_line.set_xdata(XS_TMP)
                 tmp_line.set_ydata(YS_TMP)
                 return tmp_line,
@@ -51,16 +50,10 @@ def runGraph():
         # Setup FuncAnimation
         ani = animation.FuncAnimation(fig, animate, interval=10, blit=True,
                                         cache_frame_data=False)
-                                
         plt.show()
 
         return
-
-
-
 # ---------------------------------------------------------------------------- #
-
-
 
 ##########################
 if __name__ == '__main__':

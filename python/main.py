@@ -6,12 +6,13 @@ Purpose: This script is to be used alongside an arduino script to control and
 '''
 
 from globals import *
+from graphing import runGraph
 import time
 import csv
 from operator import itemgetter
 import serial
 import math
-import graphing
+from multiprocessing import Process
 
 # ----------------------------------- MAIN ----------------------------------- #
 def main():
@@ -35,12 +36,18 @@ def main():
                                 last_line_time = row[0]
                 print(f'Loaded {i} points of which {len(SETPOINT_LIST)} are valid.')
         SETPOINT_LIST.sort(key=itemgetter(0)) #sorts based off of first element in inner tuple 
-        graphing.runGraph()
 
+        # Create Process and start
+        P = Process(target=runGraph)
+        P.start()
+
+        time.sleep(50)
+        P.join()
         return
 # ---------------------------------------------------------------------------- #
 
 ##########################
 if __name__ == '__main__':
         main()
+        T1.join()
 ##########################
