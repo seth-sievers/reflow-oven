@@ -7,6 +7,7 @@
 #include "Arduino.h"
 #include "MAX6675.h"
 #include "Stdint.h"
+#include "SoftPWM.h"
 
 /* ---------------------------- GLOBAL_VARIABLES ---------------------------- */
 // Thermocouple Vars
@@ -31,9 +32,9 @@ short STATE = 0;
 unsigned long int LAST_MESSAGE_MS = 0;  
 
 // Heater
-unsigned short PWM_FREQ = 1; 
-float UPPER_HEATER_DC = 0; 
-float LOWER_HEATER_DC = 0; 
+const unsigned short PWM_FREQ = 30; 
+SoftPWM UPPER_HEATER_PWM(10, PWM_FREQ); 
+SoftPWM LOWER_HEATER_PWM(9, PWM_FREQ); 
 
 
 unsigned long int test_MS = 0; 
@@ -55,6 +56,8 @@ void setup()
         clearBuf(BUF); 
 
         // Heaters
+        UPPER_HEATER_PWM.setDC(50); 
+        LOWER_HEATER_PWM.setDC(0); 
 
         pinMode(4, OUTPUT); 
         digitalWrite(4, LOW);
@@ -65,8 +68,10 @@ void setup()
 /* ---------------------------------- LOOP ---------------------------------- */
 void loop()
 {
-        // Heater software PWM (needs very low freq)
-        // t = DC*T
+        // Heater software PWM update (needs very low freq)
+        UPPER_HEATER_PWM.update();
+        LOWER_HEATER_PWM.update(); 
+        //digitalWrite(10, HIGH);
         
 
         // Sample every 250ms and recompute temperatures
@@ -89,7 +94,7 @@ void loop()
                         /* ---------------- //INITIALIZATION ---------------- */
                         //send READY signal and check for response
                         if ((millis() - LAST_MESSAGE_MS) > 100) {
-                                Serial.println(F("READY")); 
+                                //Serial.println(F("READY")); 
                                 LAST_MESSAGE_MS = millis(); 
                         }
                         if (Serial.available() > 0) {

@@ -16,14 +16,37 @@ void SoftPWM::update()
 {
         // if variables updated recompute timings
         if (changed) {
-                period = ceil(1.0/freq);
+                period = ceil(1000000.0/freq);
                 onPeriod = ceil((DutyCycle/100.0)*period);
                 offPeriod = period - onPeriod; 
-                changed = false; 
+                changed = false;
+
+                // if the dutycycle or frequency changes, recompute using stored lastRunUS value
+                // should mitigate pwm lag when changing from a slow frequency or high DC
+                switch (!state) // we want the previous state
+                {
+                        case 0:
+                                nextRunUS = lastRunUS + onPeriod; 
+                                break; 
+                        case 1: 
+                                nextRunUS = lastRunUS + offPeriod; 
+                                break;
+                }
+
+                Serial.print(F("period is: "));
+                Serial.print(period);
+                Serial.print(F(" on Period is: "));
+                Serial.print(onPeriod);
+                Serial.print(F(" off Period is: "));
+                Serial.println(offPeriod); 
         }
         
         //PWM state machine 
-        if (nextRunUS > micros()) {
+        if (micros() > nextRunUS) {
+                if (DutyCycle == 0 ) {
+                        digitalWrite(pin, LOW); 
+                        state = 1; 
+                }
                 switch (state)
                 {
                         case 0:
@@ -38,6 +61,21 @@ void SoftPWM::update()
                                 nextRunUS = micros() + offPeriod; 
                                 state = 0; 
                                 break; 
+                }
+                lastRunUS = micros(); 
+        } else {
+                unsigned long currentUS = micros(); 
+                if ((currentUS < nextRunUS) && ((nextRunUS - currentUS) > 1000000000UL)) {
+                        //catch any micros() overflow, one cycle will be malformed
+                        switch (!state) //we want the previous state
+                        {
+                                case 0:
+                                        nextRunUS = micros() + onPeriod; 
+                                        break; 
+                                case 1:
+                                        nextRunUS = micros() + offPeriod; 
+                                        break; 
+                        }
                 }
         }
         

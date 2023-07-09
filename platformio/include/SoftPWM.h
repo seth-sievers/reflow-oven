@@ -29,10 +29,11 @@ class SoftPWM
                 unsigned short freq; 
                 unsigned short state = 1; 
                 float DutyCycle = 0; 
-                unsigned int period; 
-                unsigned int onPeriod; 
-                unsigned int offPeriod; 
+                unsigned long period; 
+                unsigned long onPeriod; 
+                unsigned long offPeriod; 
                 unsigned long nextRunUS = 0; 
+                unsigned long lastRunUS = 0; 
 };
 /* -------------------------------------------------------------------------- */
 
