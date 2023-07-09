@@ -12,7 +12,8 @@ import csv
 from operator import itemgetter
 import serial
 import math
-from multiprocessing import Process
+import threading
+import os
 
 # ----------------------------------- MAIN ----------------------------------- #
 def main():
@@ -37,17 +38,17 @@ def main():
                 print(f'Loaded {i} points of which {len(SETPOINT_LIST)} are valid.')
         SETPOINT_LIST.sort(key=itemgetter(0)) #sorts based off of first element in inner tuple 
 
-        # Create Process and start
-        P = Process(target=runGraph)
-        P.start()
+        # Create thread an start
+        T1 = threading.Thread(target=runGraph, name='T1', args=(LOCK,))
+        T1.start()
 
-        time.sleep(50)
-        P.join()
+        time.sleep(10)
+        T1.join()
         return
 # ---------------------------------------------------------------------------- #
 
 ##########################
 if __name__ == '__main__':
         main()
-        T1.join()
+        os._exit(0)
 ##########################
