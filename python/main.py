@@ -44,7 +44,7 @@ def main():
         T1.start()
 
         # Open the Serial Port and wait for 'READY'
-        ser = serial.Serial('COM3', 9600, timeout=0.25)
+        ser = serial.Serial('COM3', 115200, timeout=0.25)
         print('Waiting for Connection...', end='')
         start_time = time.time()
         while (ser.readline().decode('ASCII') != 'READY\r\n'):
@@ -54,6 +54,8 @@ def main():
         else: 
                 print('READY')
 
+        input('PRESS ENTER TO BEGIN REFLOW')
+        ser.write(b'ACK\n') # no newline added by write()
         ser.close()
 
         T1.join()
