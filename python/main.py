@@ -44,20 +44,61 @@ def main():
         T1.start()
 
         # Open the Serial Port and wait for 'READY'
-        ser = serial.Serial('COM3', 115200, timeout=0.25)
+        ser = serial.Serial('COM3', 115200, timeout=1)
         print('Waiting for Connection...', end='')
-        start_time = time.time()
+        connection_start_time = time.time()
         while (ser.readline().decode('ASCII') != 'READY\r\n'):
-                if ((time.time() - start_time) > 15):
+                if ((time.time() - connection_start_time) > 15):
                         print('TIMEOUT')
                         break
         else: 
                 print('READY')
 
-        input('PRESS ENTER TO BEGIN REFLOW')
-        ser.write(b'ACK\n') # no newline added by write()
-        ser.close()
+        input('PRESS ENTER TO BEGIN REFLOW:')
+        ser.write('ACK\n'.encode('ASCII')) # no newline added by write()
+        
+        prewarm_started = False
+        reflow_started = False
+        state = 0
+        reflow_active = True
+        last_message_s = 0
+        # State Machine Governing Different Operating Modes
+        while (reflow_active):
+                if (state == 0):
+                        # --------------------- PREWARMNG -------------------- #
+                        if (not prewarm_started):
+                                print('---Prewarm-Started---')
+                                prewarm_started = True
+                        # read in from serial and if properly formatted send back setpoint
+                        received = ser.readline().decode('ASCII')
+                        received = received.replace('\r', '').replace('\n','')
+                        received = received.split(',')
+                        if (len(received) == 4): # cull any malformed packets
+                                if (round(float(received[0])) > 0):
+                                        print('--------DONE---------')
+                                        state = 1 # if time is no longer zero it is next state
+                                        continue
 
+                                # store temps and send back first set data point
+                                TMP_C = float(received[1])
+                                TMP_UPPER_C = float(received[2])
+                                TMP_LOWER_C = float(received[3])
+                                XS_TMP.append(0)
+                                YS_TMP.append(TMP_C)
+                                ser.write(str(round(SETPOINT_LIST[0][1],2)).encode('ASCII'))
+
+                                # print to terminal
+                                if ((time.time() - last_message_s) > 5):
+                                        print(f'Board: {TMP_C:.2f}°C,' \
+                                                f'   Top: {TMP_UPPER_C:.2f}°C,' \
+                                                f'   Bottom: {TMP_LOWER_C:.2f}°C')
+                                        last_message_s = time.time()
+                        else: 
+                                continue
+                elif (state == 1):
+                        pass
+        
+        ser.close()
         T1.join()
         return
 # ---------------------------------------------------------------------------- #

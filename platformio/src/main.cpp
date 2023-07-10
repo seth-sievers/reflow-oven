@@ -23,7 +23,6 @@ unsigned int BUF_INDEX = 0;
 float TMP_C = 0; 
 float TMP_UPPER_C = 0; 
 float TMP_LOWER_C = 0; 
-float SETPOINT = 0; 
 
 char BUF[8]; // Serial Receive Buffer
 
@@ -35,6 +34,7 @@ unsigned long int LAST_MESSAGE_MS = 0;
 const unsigned short PWM_FREQ = 2; 
 SoftPWM UPPER_HEATER_PWM(10, PWM_FREQ); 
 SoftPWM LOWER_HEATER_PWM(9, PWM_FREQ); 
+double SETPOINT = 0; 
 
 unsigned long DC = 0; 
 unsigned long int test_MS = 0; 
@@ -52,11 +52,11 @@ void setup()
 {
         // Setup serial and buffer
         Serial.begin(115200);
-        Serial.setTimeout(250); 
+        Serial.setTimeout(500); 
         clearBuf(BUF); 
 
         // Heaters
-        UPPER_HEATER_PWM.setDC(50); 
+        UPPER_HEATER_PWM.setDC(0); 
         LOWER_HEATER_PWM.setDC(0); 
 
         pinMode(4, OUTPUT); 
@@ -91,14 +91,13 @@ void loop()
                 case 0:
                         /* ---------------- //INITIALIZATION ---------------- */
                         //send READY signal and check for response
-                        if ((millis() - LAST_MESSAGE_MS) > 100) {
+                        if ((millis() - LAST_MESSAGE_MS) > 250) {
                                 Serial.println(F("READY")); 
                                 LAST_MESSAGE_MS = millis(); 
                         }
                         if (Serial.available() > 0) {
                                 Serial.readBytesUntil('\n', BUF, 8);
                                 if (strcmp(BUF, "ACK") == 0) {
-                                        //digitalWrite(4,HIGH); 
                                         STATE = 1; 
                                 } else {
                                         clearBuf(BUF); 
@@ -109,7 +108,7 @@ void loop()
                         /* --------------------- PREWARM -------------------- */
                         // time of 0 tells host to send first setpoint and specifies 
                         // oven is prewarming and timer has not started
-                        if ((millis() - LAST_MESSAGE_MS) > 100) {
+                        if ((millis() - LAST_MESSAGE_MS) > 500) {
                                 sendData(0, TMP_C, TMP_UPPER_C, TMP_LOWER_C);
                                 LAST_MESSAGE_MS = millis(); 
                         }
@@ -120,6 +119,9 @@ void loop()
                                         clearBuf(BUF);
                                 } else {
                                         clearBuf(BUF); 
+                                }
+                                if (TMP_C > SETPOINT) {
+                                        STATE = 2; 
                                 }
                         }
                         break; 
