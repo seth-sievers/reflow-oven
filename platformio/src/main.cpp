@@ -8,6 +8,7 @@
 #include "MAX6675.h"
 #include "Stdint.h"
 #include "SoftPWM.h"
+#include "PID_v1.h"
 
 /* ---------------------------- GLOBAL_VARIABLES ---------------------------- */
 // Thermocouple Vars
@@ -20,7 +21,7 @@ float TMP_LOWER_BUF[4];
 unsigned long int LAST_SAMPLE_MS = 0; 
 unsigned long int NUM_SAMPLES = 0; 
 unsigned int BUF_INDEX = 0; 
-float TMP_C = 0; 
+double TMP_C = 0; 
 float TMP_UPPER_C = 0; 
 float TMP_LOWER_C = 0; 
 
@@ -29,12 +30,20 @@ char BUF[8]; // Serial Receive Buffer
 // State machine
 short STATE = 0;
 unsigned long int LAST_MESSAGE_MS = 0;  
+unsigned long int REFLOW_START_MS = 0; 
 
 // Heater
 const unsigned short PWM_FREQ = 2; 
 SoftPWM UPPER_HEATER_PWM(10, PWM_FREQ); 
 SoftPWM LOWER_HEATER_PWM(9, PWM_FREQ); 
+double UPPER_HEATER_DC = 0;
+double LOWER_HEATER_DC = 0; 
 double SETPOINT = 0; 
+double PID_OUTPUT = 0; 
+double KP = 10;
+double KI = 0;
+double KD = 0; 
+PID PID_CONTROLLER(&TMP_C, &PID_OUTPUT, &SETPOINT, KP, KI, KD, P_ON_M, DIRECT);
 
 unsigned long DC = 0; 
 unsigned long int test_MS = 0; 
@@ -58,6 +67,10 @@ void setup()
         // Heaters
         UPPER_HEATER_PWM.setDC(0); 
         LOWER_HEATER_PWM.setDC(0); 
+        PID_CONTROLLER.SetMode(MANUAL);
+        PID_CONTROLLER.SetOutputLimits(0, 200);
+        PID_CONTROLLER.SetSampleTime(500);
+        
 
         pinMode(4, OUTPUT); 
         digitalWrite(4, LOW);
@@ -68,7 +81,7 @@ void setup()
 /* ---------------------------------- LOOP ---------------------------------- */
 void loop()
 {
-        // Heater software PWM update (needs very low freq)
+        // Heater software PWM update
         UPPER_HEATER_PWM.update();
         LOWER_HEATER_PWM.update();
 
@@ -116,16 +129,46 @@ void loop()
                                 Serial.readBytesUntil('\n', BUF, 8);
                                 if (isNumeric(BUF)) {
                                         SETPOINT = atof(BUF); 
+                                        UPPER_HEATER_PWM.setDC(100);
+                                        LOWER_HEATER_PWM.setDC(100);
                                         clearBuf(BUF);
                                 } else {
                                         clearBuf(BUF); 
                                 }
                                 if (TMP_C > SETPOINT) {
+                                        UPPER_HEATER_PWM.setDC(0);
+                                        LOWER_HEATER_PWM.setDC(0);
+                                        REFLOW_START_MS = millis(); 
+                                        PID_CONTROLLER.SetMode(AUTOMATIC);
                                         STATE = 2; 
                                 }
                         }
                         break; 
                 case 2:
+                        /* --------------------- REFLOW --------------------- */
+                        // PID controller takes over and follows setpoint sent
+                        // by host script
+                        PID_CONTROLLER.Compute(); 
+                        UPPER_HEATER_DC = PID_OUTPUT/2.0;
+                        LOWER_HEATER_DC = PID_OUTPUT/2.0;
+                        UPPER_HEATER_PWM.setDC(UPPER_HEATER_DC);
+                        LOWER_HEATER_PWM.setDC(LOWER_HEATER_DC); 
+
+                        if ((millis() - LAST_MESSAGE_MS) > 500) {
+                                sendData((millis() - REFLOW_START_MS), 
+                                        TMP_C, TMP_UPPER_C, TMP_LOWER_C);
+                                LAST_MESSAGE_MS = millis(); 
+                        }
+                        if (Serial.available() > 0) {
+                                Serial.readBytesUntil('\n', BUF, 8);
+                                if (isNumeric(BUF)) {
+                                        SETPOINT = atof(BUF); 
+                                        clearBuf(BUF);
+                                } else {
+                                        clearBuf(BUF); 
+                                }
+                        }
+                        digitalWrite(4, HIGH); 
                         break; 
         }
 

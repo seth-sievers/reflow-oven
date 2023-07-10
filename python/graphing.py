@@ -53,7 +53,7 @@ def runGraph():
                 return tmp_line,
 
         # Setup FuncAnimation
-        ani = animation.FuncAnimation(fig, animate, interval=100, blit=True,
+        ani = animation.FuncAnimation(fig, animate, interval=250, blit=True,
                                         cache_frame_data=False)
         plt.show()
 

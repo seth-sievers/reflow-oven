@@ -83,8 +83,10 @@ void SoftPWM::setFreq(const unsigned short FREQ)
 
 void SoftPWM::setDC(const float DC)
 {
-        DutyCycle = DC; 
-        changed = true; 
+        if (DC != DutyCycle) {
+                DutyCycle = DC; 
+                changed = true; 
+        }
         return; 
 }
 /* -------------------------------------------------------------------------- */

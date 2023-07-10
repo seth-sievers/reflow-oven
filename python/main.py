@@ -14,6 +14,7 @@ import serial
 import math
 import threading
 import os
+from interpolate import *
 
 # ----------------------------------- MAIN ----------------------------------- #
 def main():
@@ -85,7 +86,7 @@ def main():
                                 TMP_LOWER_C = float(received[3])
                                 XS_TMP.append(0)
                                 YS_TMP.append(TMP_C)
-                                ser.write(str(round(SETPOINT_LIST[0][1],2)).encode('ASCII'))
+                                ser.write((str(round(SETPOINT_LIST[0][1],2))+'\n').encode('ASCII'))
 
                                 # print to terminal
                                 if ((time.time() - last_message_s) > 5):
@@ -96,7 +97,32 @@ def main():
                         else: 
                                 continue
                 elif (state == 1):
-                        pass
+                        if (not reflow_started):
+                                print('---Reflow-Started----')
+                                reflow_started = True
+                        # read in from serial and if properly formatted send back setpoint
+                        received = ser.readline().decode('ASCII')
+                        received = received.replace('\r', '').replace('\n','')
+                        received = received.split(',')
+                        if (len(received) == 4): # cull any malformed packets
+                                # store temps and send back first set data point
+                                REFLOW_TIME = float(received[0])
+                                TMP_C = float(received[1])
+                                TMP_UPPER_C = float(received[2])
+                                TMP_LOWER_C = float(received[3])
+                                XS_TMP.append(REFLOW_TIME)
+                                YS_TMP.append(TMP_C)
+                                interpolate_setpoint()
+                                #!ser.write((str(round(SETPOINT_LIST[0][1],2))+'\n').encode('ASCII'))
+
+                                # print to terminal
+                                if ((time.time() - last_message_s) > 5):
+                                        print(f'Board: {TMP_C:.2f}°C,' \
+                                                f'   Top: {TMP_UPPER_C:.2f}°C,' \
+                                                f'   Bottom: {TMP_LOWER_C:.2f}°C')
+                                        last_message_s = time.time()
+                        else: 
+                                continue
         
         ser.close()
         T1.join()
