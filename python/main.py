@@ -106,11 +106,11 @@ def main():
                         received = received.split(',')
                         if (len(received) == 4): # cull any malformed packets
                                 # store temps and send back interpolated set points
-                                cfg.REFLOW_TIME = float(received[0])
+                                cfg.REFLOW_TIME = (float(received[0]) +25) #! REMOVE +25
                                 TMP_C = float(received[1])
                                 TMP_UPPER_C = float(received[2])
                                 TMP_LOWER_C = float(received[3])
-                                cfg.XS_TMP.append(cfg.REFLOW_TIME)
+                                cfg.XS_TMP.append(cfg.REFLOW_TIME - 25) #! REMOVE -25
                                 cfg.YS_TMP.append(TMP_C)
                                 ser.write((str(round(interpolate_setpoint(),2))+'\n').encode('ASCII'))
 
