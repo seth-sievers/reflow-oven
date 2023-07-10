@@ -45,8 +45,8 @@ double KI = 0;
 double KD = 0; 
 PID PID_CONTROLLER(&TMP_C, &PID_OUTPUT, &SETPOINT, KP, KI, KD, P_ON_E, DIRECT);
 
-unsigned long DC = 0; 
-unsigned long int test_MS = 0; 
+//tmp
+bool HAS_HEATED = false; 
 /* -------------------------------------------------------------------------- */
 
 /* ----------------------------- FUNCTION_STUBS ----------------------------- */
@@ -148,11 +148,19 @@ void loop()
                         /* --------------------- REFLOW --------------------- */
                         // PID controller takes over and follows setpoint sent
                         // by host script
-                        PID_CONTROLLER.Compute(); 
-                        UPPER_HEATER_DC = PID_OUTPUT/2.0;
-                        LOWER_HEATER_DC = PID_OUTPUT/2.0;
-                        UPPER_HEATER_PWM.setDC(UPPER_HEATER_DC);
-                        LOWER_HEATER_PWM.setDC(LOWER_HEATER_DC); 
+                        //! PID_CONTROLLER.Compute(); 
+                        //! UPPER_HEATER_DC = PID_OUTPUT/2.0;
+                        //! LOWER_HEATER_DC = PID_OUTPUT/2.0;
+                        //! UPPER_HEATER_PWM.setDC(UPPER_HEATER_DC);
+                        //! LOWER_HEATER_PWM.setDC(LOWER_HEATER_DC); 
+                        if (SETPOINT > 200) {
+                                if (!HAS_HEATED) {
+                                        UPPER_HEATER_PWM.setDC(100); 
+                                        HAS_HEATED = true; 
+                                }
+                        } else if (HAS_HEATED) {
+                                UPPER_HEATER_PWM.setDC(0); 
+                        }
 
                         if ((millis() - LAST_MESSAGE_MS) > 500) {
                                 sendData((millis() - REFLOW_START_MS), 
