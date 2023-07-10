@@ -40,10 +40,10 @@ double UPPER_HEATER_DC = 0;
 double LOWER_HEATER_DC = 0; 
 double SETPOINT = 0; 
 double PID_OUTPUT = 0; 
-double KP = 10;
+double KP = 5;
 double KI = 0;
 double KD = 0; 
-PID PID_CONTROLLER(&TMP_C, &PID_OUTPUT, &SETPOINT, KP, KI, KD, P_ON_M, DIRECT);
+PID PID_CONTROLLER(&TMP_C, &PID_OUTPUT, &SETPOINT, KP, KI, KD, P_ON_E, DIRECT);
 
 unsigned long DC = 0; 
 unsigned long int test_MS = 0; 
@@ -156,7 +156,7 @@ void loop()
 
                         if ((millis() - LAST_MESSAGE_MS) > 500) {
                                 sendData((millis() - REFLOW_START_MS), 
-                                        TMP_C, TMP_UPPER_C, TMP_LOWER_C);
+                                        TMP_C, SETPOINT, TMP_LOWER_C);
                                 LAST_MESSAGE_MS = millis(); 
                         }
                         if (Serial.available() > 0) {

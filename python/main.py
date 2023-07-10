@@ -105,17 +105,14 @@ def main():
                         received = received.replace('\r', '').replace('\n','')
                         received = received.split(',')
                         if (len(received) == 4): # cull any malformed packets
-                                # store temps and send back first set data point
+                                # store temps and send back interpolated set points
                                 cfg.REFLOW_TIME = float(received[0])
                                 TMP_C = float(received[1])
                                 TMP_UPPER_C = float(received[2])
                                 TMP_LOWER_C = float(received[3])
                                 cfg.XS_TMP.append(cfg.REFLOW_TIME)
                                 cfg.YS_TMP.append(TMP_C)
-                                print(f'REFLOW_MAIN:{cfg.REFLOW_TIME}')
-                                interpolate_setpoint()
-                                #print(f'reflow time: {cfg.REFLOW_TIME}, returning: {interpolate_setpoint()}, list:{cfg.SETPOINT_LIST[0][0]}')
-                                #!ser.write((str(round(cfg.SETPOINT_LIST[0][1],2))+'\n').encode('ASCII'))
+                                ser.write((str(round(interpolate_setpoint(),2))+'\n').encode('ASCII'))
 
                                 # print to terminal
                                 if ((time.time() - last_message_s) > 5):
