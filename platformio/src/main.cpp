@@ -33,7 +33,7 @@ unsigned long int LAST_MESSAGE_MS = 0;
 unsigned long int REFLOW_START_MS = 0; 
 
 // Heater
-const unsigned short PWM_FREQ = 2; 
+const float PWM_FREQ = 1; 
 SoftPWM UPPER_HEATER_PWM(10, PWM_FREQ); 
 SoftPWM LOWER_HEATER_PWM(9, PWM_FREQ); 
 double UPPER_HEATER_DC = 0;
