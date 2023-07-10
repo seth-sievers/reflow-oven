@@ -5,7 +5,7 @@ Purpose: This script is to be used alongside an arduino script to control and
         monitor a modified toaster oven for the purpose of reflowing SMD PCB's
 '''
 
-import globals
+import cfg
 from graphing import runGraph
 import time
 import csv
@@ -18,17 +18,16 @@ from interpolate import interpolate_setpoint
 
 # ----------------------------------- MAIN ----------------------------------- #
 def main():
-        global REFLOW_TIME
         # Get CSV name and verify extension
         print('---REFLOW-HOST-SCRIPT---')
         print('Specify the complete filename for the CSV defined reflow curve')
-        CSV_FILENAME = input('CSV Filename: ')
-        if (CSV_FILENAME[-4::] != '.csv'):
-                CSV_FILENAME += '.csv'
-        CSV_FILENAME = 'kesterEP256.csv' #! REMOVE
+        cfg.CSV_FILENAME = input('CSV Filename: ')
+        if (cfg.CSV_FILENAME[-4::] != '.csv'):
+                cfg.CSV_FILENAME += '.csv'
+        cfg.CSV_FILENAME = 'kesterEP256.csv' #! REMOVE
 
         # Open CSV and read into storage list pruning duplicate values
-        with open(CSV_FILENAME, newline='') as csvfile:
+        with open(cfg.CSV_FILENAME, newline='') as csvfile:
                 csvreader = csv.reader(csvfile, delimiter=',')
                 last_line_time = -1
                 i = 0
@@ -36,10 +35,10 @@ def main():
                         i += 1
                         row = (float(row[0]), float(row[1]))
                         if ((row[0] >= 0) and (row[0] > last_line_time) and (row[1] >= 0)):
-                                SETPOINT_LIST.append(row)
+                                cfg.SETPOINT_LIST.append(row)
                                 last_line_time = row[0]
-                print(f'Loaded {i} points of which {len(SETPOINT_LIST)} are valid.')
-        SETPOINT_LIST.sort(key=itemgetter(0)) #sorts based off of first element in inner tuple 
+                print(f'Loaded {i} points of which {len(cfg.SETPOINT_LIST)} are valid.')
+        cfg.SETPOINT_LIST.sort(key=itemgetter(0)) #sorts based off of first element in inner tuple 
 
         # Create thread an start
         T1 = threading.Thread(target=runGraph, name='T1')
@@ -85,9 +84,9 @@ def main():
                                 TMP_C = float(received[1])
                                 TMP_UPPER_C = float(received[2])
                                 TMP_LOWER_C = float(received[3])
-                                XS_TMP.append(0)
-                                YS_TMP.append(TMP_C)
-                                ser.write((str(round(SETPOINT_LIST[0][1],2))+'\n').encode('ASCII'))
+                                cfg.XS_TMP.append(0)
+                                cfg.YS_TMP.append(TMP_C)
+                                ser.write((str(round(cfg.SETPOINT_LIST[0][1],2))+'\n').encode('ASCII'))
 
                                 # print to terminal
                                 if ((time.time() - last_message_s) > 5):
@@ -107,16 +106,16 @@ def main():
                         received = received.split(',')
                         if (len(received) == 4): # cull any malformed packets
                                 # store temps and send back first set data point
-                                REFLOW_TIME = float(received[0])
+                                cfg.REFLOW_TIME = float(received[0])
                                 TMP_C = float(received[1])
                                 TMP_UPPER_C = float(received[2])
                                 TMP_LOWER_C = float(received[3])
-                                XS_TMP.append(REFLOW_TIME)
-                                YS_TMP.append(TMP_C)
-                                print(f'REFLOW_MAIN:{REFLOW_TIME}')
+                                cfg.XS_TMP.append(cfg.REFLOW_TIME)
+                                cfg.YS_TMP.append(TMP_C)
+                                print(f'REFLOW_MAIN:{cfg.REFLOW_TIME}')
                                 interpolate_setpoint()
-                                #print(f'reflow time: {REFLOW_TIME}, returning: {interpolate_setpoint()}, list:{SETPOINT_LIST[0][0]}')
-                                #!ser.write((str(round(SETPOINT_LIST[0][1],2))+'\n').encode('ASCII'))
+                                #print(f'reflow time: {cfg.REFLOW_TIME}, returning: {interpolate_setpoint()}, list:{cfg.SETPOINT_LIST[0][0]}')
+                                #!ser.write((str(round(cfg.SETPOINT_LIST[0][1],2))+'\n').encode('ASCII'))
 
                                 # print to terminal
                                 if ((time.time() - last_message_s) > 5):

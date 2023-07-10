@@ -1,4 +1,4 @@
-from globals import *
+import cfg
 import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
@@ -8,13 +8,13 @@ import math
 import warnings
 
 # --------------------------------- RUNGRAPH --------------------------------- #
-# Based off of https://stackoverflow.com/questions/51949185/non-blocking-matplotlib-animation
+# Based off of https://stackoverflow.com/questions/51949185/non-bcfg.LOCKing-matplotlib-animation
 def runGraph():
         warnings.filterwarnings('ignore', module='graphing')
         # y_lim = max setpoint plus 10%, x_lim = max time plus 10%
-        y_len = math.ceil((sorted(SETPOINT_LIST, key=itemgetter(1), reverse=True)[0][1])*1.1)
+        y_len = math.ceil((sorted(cfg.SETPOINT_LIST, key=itemgetter(1), reverse=True)[0][1])*1.1)
         y_range = (20, y_len)
-        x_len = math.ceil(SETPOINT_LIST[-1][0]*1.1)
+        x_len = math.ceil(cfg.SETPOINT_LIST[-1][0]*1.1)
         x_range = (0, x_len)
 
         # create figure
@@ -26,15 +26,15 @@ def runGraph():
         # create setpoint line
         xs_sp = []
         ys_sp = []
-        for k in SETPOINT_LIST:
+        for k in cfg.SETPOINT_LIST:
                 xs_sp.append(k[0])
                 ys_sp.append(k[1])
         setpoint_line, = ax.plot(xs_sp, ys_sp, color='xkcd:purple', linestyle=':')
 
         #create temp line
-        LOCK.acquire()
-        tmp_line, = ax.plot(XS_TMP, YS_TMP, color='xkcd:red', linestyle='solid')
-        LOCK.release()
+        cfg.LOCK.acquire()
+        tmp_line, = ax.plot(cfg.XS_TMP, cfg.YS_TMP, color='xkcd:red', linestyle='solid')
+        cfg.LOCK.release()
 
         # labels
         plt.title('REFLOW TEMPERATURE')
@@ -46,10 +46,10 @@ def runGraph():
 
         # This function updates temp line with new data and is called by FuncAnimation()
         def animate(i):
-                LOCK.acquire()
-                tmp_line.set_xdata(XS_TMP)
-                tmp_line.set_ydata(YS_TMP)
-                LOCK.release()
+                cfg.LOCK.acquire()
+                tmp_line.set_xdata(cfg.XS_TMP)
+                tmp_line.set_ydata(cfg.YS_TMP)
+                cfg.LOCK.release()
                 return tmp_line,
 
         # Setup FuncAnimation
