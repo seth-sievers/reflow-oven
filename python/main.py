@@ -24,7 +24,7 @@ def main():
         cfg.CSV_FILENAME = input('CSV Filename: ')
         if (cfg.CSV_FILENAME[-4::] != '.csv'):
                 cfg.CSV_FILENAME += '.csv'
-        cfg.CSV_FILENAME = 'kesterEP256.csv' #! REMOVE
+        #cfg.CSV_FILENAME = 'kesterEP256.csv' #! REMOVE
 
         # Open CSV and read into storage list pruning duplicate values
         with open(cfg.CSV_FILENAME, newline='') as csvfile:
@@ -106,11 +106,11 @@ def main():
                         received = received.split(',')
                         if (len(received) == 4): # cull any malformed packets
                                 # store temps and send back interpolated set points
-                                cfg.REFLOW_TIME = (float(received[0]) +25) #! REMOVE +25
+                                cfg.REFLOW_TIME = float(received[0])
                                 TMP_C = float(received[1])
                                 TMP_UPPER_C = float(received[2])
                                 TMP_LOWER_C = float(received[3])
-                                cfg.XS_TMP.append(cfg.REFLOW_TIME - 25) #! REMOVE -25
+                                cfg.XS_TMP.append(cfg.REFLOW_TIME)
                                 cfg.YS_TMP.append(TMP_C)
                                 ser.write((str(round(interpolate_setpoint(),2))+'\n').encode('ASCII'))
 
