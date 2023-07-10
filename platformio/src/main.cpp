@@ -40,7 +40,7 @@ double UPPER_HEATER_DC = 0;
 double LOWER_HEATER_DC = 0; 
 double SETPOINT = 0; 
 double PID_OUTPUT = 0; 
-double KP = 10;
+double KP = 20;
 double KI = 0;
 double KD = 0; 
 PID PID_CONTROLLER(&TMP_C, &PID_OUTPUT, &SETPOINT, KP, KI, KD, P_ON_E, DIRECT);
