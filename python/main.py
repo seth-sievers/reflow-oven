@@ -5,7 +5,7 @@ Purpose: This script is to be used alongside an arduino script to control and
         monitor a modified toaster oven for the purpose of reflowing SMD PCB's
 '''
 
-from globals import *
+import globals
 from graphing import runGraph
 import time
 import csv
@@ -14,10 +14,11 @@ import serial
 import math
 import threading
 import os
-from interpolate import *
+from interpolate import interpolate_setpoint
 
 # ----------------------------------- MAIN ----------------------------------- #
 def main():
+        global REFLOW_TIME
         # Get CSV name and verify extension
         print('---REFLOW-HOST-SCRIPT---')
         print('Specify the complete filename for the CSV defined reflow curve')
@@ -112,7 +113,9 @@ def main():
                                 TMP_LOWER_C = float(received[3])
                                 XS_TMP.append(REFLOW_TIME)
                                 YS_TMP.append(TMP_C)
+                                print(f'REFLOW_MAIN:{REFLOW_TIME}')
                                 interpolate_setpoint()
+                                #print(f'reflow time: {REFLOW_TIME}, returning: {interpolate_setpoint()}, list:{SETPOINT_LIST[0][0]}')
                                 #!ser.write((str(round(SETPOINT_LIST[0][1],2))+'\n').encode('ASCII'))
 
                                 # print to terminal

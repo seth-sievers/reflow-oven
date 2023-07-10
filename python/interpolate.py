@@ -5,11 +5,15 @@ from globals import *
 # a linear line between them
 
 def interpolate_setpoint():
+        global REFLOW_TIME
         # if time less than first point, setpoint is 0
-        if (REFLOW_TIME <= (SETPOINT_LIST[0][0])):
+        if (float(REFLOW_TIME) <= 10):
+                print(TMP_C)
+                print(f'Time less than first {0 >= REFLOW_TIME}, REFLOW_TIME:{REFLOW_TIME}')
                 return 0
         # if time greater than last point, setpoint is 0
         if (REFLOW_TIME >= (SETPOINT_LIST[-1][0])):
+                print('Time greater than last')
                 return 0
         
         # increment the current index until the next index's time is greater
@@ -29,14 +33,17 @@ def interpolate_setpoint():
                                         return Y
                                 else: 
                                         # need to increment the index because the next point is too soon
+                                        print('increment the index and try again')
                                         CURRENT_INDEX += 1
                                         continue
 
                         else: 
+                                print('return 0 and wait until time is greater')
                                 return 0 # return 0 and wait until the time is greater
                         
                 else: 
+                        print('Index on last point')
                         return 0 # this means our index is on the last point, heaters should be off
-                
+
 
 # ---------------------------------------------------------------------------- #
