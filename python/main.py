@@ -45,7 +45,7 @@ def main():
         T1.start()
 
         # Open the Serial Port and wait for 'READY'
-        ser = serial.Serial('COM3', 115200, timeout=1)
+        ser = serial.Serial('COM4', 115200, timeout=1)
         print('Waiting for Connection...', end='')
         connection_start_time = time.time()
         while (ser.readline().decode('ASCII') != 'READY\r\n'):
