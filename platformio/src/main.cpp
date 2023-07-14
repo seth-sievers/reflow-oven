@@ -13,8 +13,8 @@
 /* ---------------------------- GLOBAL_VARIABLES ---------------------------- */
 // Thermocouple Vars
 MAX6675 TMP(8);
-MAX6675 TMP_UPPER(7); 
-MAX6675 TMP_LOWER(6); 
+//!MAX6675 TMP_UPPER(7); 
+//!MAX6675 TMP_LOWER(6); 
 float TMP_BUF[4];
 float TMP_UPPER_BUF[4];
 float TMP_LOWER_BUF[4]; 
@@ -89,8 +89,10 @@ void loop()
         if ((millis() - LAST_SAMPLE_MS) > 250){
                 BUF_INDEX = (NUM_SAMPLES % 4);
                 TMP_BUF[BUF_INDEX] = TMP.readTempC();
-                TMP_UPPER_BUF[BUF_INDEX] = TMP_UPPER.readTempC();
-                TMP_LOWER_BUF[BUF_INDEX] = TMP_LOWER.readTempC(); 
+                //!TMP_UPPER_BUF[BUF_INDEX] = TMP_UPPER.readTempC();
+                //!TMP_LOWER_BUF[BUF_INDEX] = TMP_LOWER.readTempC(); 
+                TMP_UPPER_BUF[BUF_INDEX] = 0;
+                TMP_LOWER_BUF[BUF_INDEX] = 0; 
                 LAST_SAMPLE_MS = millis(); 
                 NUM_SAMPLES++; 
                 TMP_C = sum(TMP_BUF)/4.0;
