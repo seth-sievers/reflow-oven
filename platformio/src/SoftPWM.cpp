@@ -2,7 +2,7 @@
 #include "Arduino.h"
 
 /* ------------------------- SOFT_PWM_IMPLEMENTATION ------------------------ */
-SoftPWM::SoftPWM(const unsigned short PIN, const unsigned short FREQ)
+SoftPWM::SoftPWM(const unsigned short PIN, const float FREQ)
 {
         pin = PIN; 
         freq = FREQ; 
@@ -74,7 +74,7 @@ void SoftPWM::update()
         
 }
 
-void SoftPWM::setFreq(const unsigned short FREQ)
+void SoftPWM::setFreq(const float FREQ)
 {
         freq = FREQ; 
         changed = true; 

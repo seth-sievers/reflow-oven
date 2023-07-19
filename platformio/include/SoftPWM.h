@@ -11,14 +11,14 @@ class SoftPWM
 {
         public: 
                 // Creates a soft PWM generator on the specified pin 
-                SoftPWM(const unsigned short PIN, const unsigned short FREQ);
+                SoftPWM(const unsigned short PIN, const float FREQ);
                 
                 // Updates timings and switches output if necessary. Should be placed
                 // in main loop and ran as fast as possible 
                 void update();
 
                 // changes set PWM frequency
-                void setFreq(const unsigned short freq); 
+                void setFreq(const float freq); 
 
                 // changes set PWM DC, 0 is true off
                 void setDC(const float DC); 
