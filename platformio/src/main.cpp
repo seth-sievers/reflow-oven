@@ -13,19 +13,13 @@
 /* ---------------------------- GLOBAL_VARIABLES ---------------------------- */
 // Thermocouple Vars
 MAX6675 TMP(8);
-//!MAX6675 TMP_UPPER(7); 
-//!MAX6675 TMP_LOWER(6); 
 float TMP_BUF[4];
-float TMP_UPPER_BUF[4];
-float TMP_LOWER_BUF[4]; 
 unsigned long int LAST_SAMPLE_MS = 0; 
 unsigned long int NUM_SAMPLES = 0; 
 unsigned int BUF_INDEX = 0; 
 double TMP_C = 0; 
-float TMP_UPPER_C = 0; 
-float TMP_LOWER_C = 0; 
 
-char BUF[8]; // Serial Receive Buffer
+char BUF[12]; // Serial Receive Buffer
 
 // State machine
 short STATE = 0;
@@ -34,10 +28,8 @@ unsigned long int REFLOW_START_MS = 0;
 
 // Heater
 const float PWM_FREQ = 0.5; 
-SoftPWM UPPER_HEATER_PWM(10, PWM_FREQ); 
-SoftPWM LOWER_HEATER_PWM(9, PWM_FREQ); 
-double UPPER_HEATER_DC = 0;
-double LOWER_HEATER_DC = 0; 
+SoftPWM HEATER_PWM(10, PWM_FREQ); 
+double HEATER_DC = 0;
 double SETPOINT = 0; 
 double PID_OUTPUT = 0; 
 double KP = 5;
@@ -52,7 +44,7 @@ bool HAS_HEATED = false;
 /* ----------------------------- FUNCTION_STUBS ----------------------------- */
 float sum(const float array[4]); 
 void clearBuf(char array[8]); 
-void sendData(unsigned long int time, float tmpC, float tmpUpperC, float tmpLowerC);
+void sendData(unsigned long int time, float tmpC, float setP);
 bool isNumeric (const char array[8]);
 /* -------------------------------------------------------------------------- */
 
@@ -64,14 +56,12 @@ void setup()
         Serial.setTimeout(500); 
         clearBuf(BUF); 
 
-        // Heaters
-        UPPER_HEATER_PWM.setDC(0); 
-        LOWER_HEATER_PWM.setDC(0); 
+        // Heater and Control 
+        HEATER_PWM.setDC(0); 
         PID_CONTROLLER.SetMode(MANUAL);
         PID_CONTROLLER.SetOutputLimits(0, 200);
         PID_CONTROLLER.SetSampleTime(500);
         
-
         pinMode(4, OUTPUT); 
         digitalWrite(4, LOW);
 
@@ -82,22 +72,15 @@ void setup()
 void loop()
 {
         // Heater software PWM update
-        UPPER_HEATER_PWM.update();
-        LOWER_HEATER_PWM.update();
+        HEATER_PWM.update();
 
         // Sample every 250ms and recompute temperatures
         if ((millis() - LAST_SAMPLE_MS) > 250){
                 BUF_INDEX = (NUM_SAMPLES % 4);
                 TMP_BUF[BUF_INDEX] = TMP.readTempC();
-                //!TMP_UPPER_BUF[BUF_INDEX] = TMP_UPPER.readTempC();
-                //!TMP_LOWER_BUF[BUF_INDEX] = TMP_LOWER.readTempC(); 
-                TMP_UPPER_BUF[BUF_INDEX] = 0;
-                TMP_LOWER_BUF[BUF_INDEX] = 0; 
                 LAST_SAMPLE_MS = millis(); 
                 NUM_SAMPLES++; 
                 TMP_C = sum(TMP_BUF)/4.0;
-                TMP_UPPER_C = sum(TMP_UPPER_BUF)/4.0;
-                TMP_LOWER_C = sum(TMP_LOWER_BUF)/4.0;
         }
 
         // State machine controlling operation
@@ -124,22 +107,20 @@ void loop()
                         // time of 0 tells host to send first setpoint and specifies 
                         // oven is prewarming and timer has not started
                         if ((millis() - LAST_MESSAGE_MS) > 500) {
-                                sendData(0, TMP_C, TMP_UPPER_C, TMP_LOWER_C);
+                                sendData(0, TMP_C, SETPOINT);
                                 LAST_MESSAGE_MS = millis(); 
                         }
                         if (Serial.available() > 0) {
                                 Serial.readBytesUntil('\n', BUF, 8);
                                 if (isNumeric(BUF)) {
                                         SETPOINT = atof(BUF); 
-                                        UPPER_HEATER_PWM.setDC(100);
-                                        LOWER_HEATER_PWM.setDC(100);
+                                        HEATER_PWM.setDC(100);
                                         clearBuf(BUF);
                                 } else {
                                         clearBuf(BUF); 
                                 }
                                 if (TMP_C > SETPOINT) {
-                                        UPPER_HEATER_PWM.setDC(0);
-                                        LOWER_HEATER_PWM.setDC(0);
+                                        HEATER_PWM.setDC(0);
                                         REFLOW_START_MS = millis(); 
                                         PID_CONTROLLER.SetMode(AUTOMATIC);
                                         STATE = 2; 
@@ -151,20 +132,20 @@ void loop()
                         // PID controller takes over and follows setpoint sent
                         // by host script
                         PID_CONTROLLER.Compute(); 
-                        UPPER_HEATER_DC = PID_OUTPUT/2.0;
-                        LOWER_HEATER_DC = PID_OUTPUT/2.0;
-                        //!UPPER_HEATER_PWM.setDC(UPPER_HEATER_DC);
-                        //!LOWER_HEATER_PWM.setDC(LOWER_HEATER_DC); 
-
+                        HEATER_DC = PID_OUTPUT; //TODO: Change for Feedforward control
+                        //!HEATER_PWM.setDC(HEATER_DC);
+                        
+                        //! ----------------- IMPULSE_TESTING ---------------- */
                         if (SETPOINT < 200) {
-                                UPPER_HEATER_PWM.setDC(0);
+                                HEATER_PWM.setDC(0);
                         } else {
-                                UPPER_HEATER_PWM.setDC(80); 
+                                HEATER_PWM.setDC(80); 
                         }
+                        //! -------------------------------------------------- */
 
                         if ((millis() - LAST_MESSAGE_MS) > 500) {
                                 sendData((millis() - REFLOW_START_MS), 
-                                        TMP_C, TMP_UPPER_C, TMP_LOWER_C);
+                                        TMP_C, SETPOINT);
                                 LAST_MESSAGE_MS = millis(); 
                         }
                         if (Serial.available() > 0) {
@@ -210,30 +191,28 @@ float sum(const float array[4])
         return total; 
 }
 
-void clearBuf(char array[8])
+void clearBuf(char array[12])
 {
-        for (short i = 0; i < 8; i++) 
+        for (short i = 0; i < 12; i++) 
         {
                 array[i] = '\0'; 
         }
         return; 
 }
 
-void sendData(unsigned long int time, float tmpC, float tmpUpperC, float tmpLowerC)
+void sendData(unsigned long int time, float tmpC, float setP)
 {
         Serial.print(time/1000.0);
         Serial.print(F(","));
         Serial.print(tmpC); 
         Serial.print(F(","));
-        Serial.print(tmpUpperC);
-        Serial.print(F(","));
-        Serial.println(tmpLowerC); 
+        Serial.println(setP);
 }
 
-bool isNumeric (const char array[8])
+bool isNumeric (const char array[12])
 {
         bool isANumber = false; 
-        for (short i = 0; i < 8; i++)
+        for (short i = 0; i < 12; i++)
         {
                 if (array[i] != '\0') {
                         if (isDigit(array[i]) || ((array[i] == '.') && (i != 0))) {
