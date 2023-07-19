@@ -97,6 +97,7 @@ def main():
                         else: 
                                 continue
                 elif (state == 1):
+                        # ---------------------- REFLOW ---------------------- #
                         if (not reflow_started):
                                 print('---Reflow-Started----')
                                 reflow_started = True

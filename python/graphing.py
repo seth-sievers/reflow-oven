@@ -6,6 +6,7 @@ import threading
 from operator import itemgetter
 import math
 import warnings
+import csv
 
 # --------------------------------- RUNGRAPH --------------------------------- #
 # Based off of https://stackoverflow.com/questions/51949185/non-bcfg.LOCKing-matplotlib-animation
@@ -57,6 +58,12 @@ def runGraph():
                                         cache_frame_data=False)
         plt.show()
 
+        # Before terminating save the temperature data for analysis 
+        fields = [ [cfg.XS_TMP[i], cfg.YS_TMP[i]] for i in range(len(cfg.XS_TMP))]
+        with open('lastrun.csv', 'w', newline='') as csvfile:
+                csvwriter = csv.writer(csvfile, delimiter=',')
+                csvwriter.writerows(fields)
+        
         return
 # ---------------------------------------------------------------------------- #
 
