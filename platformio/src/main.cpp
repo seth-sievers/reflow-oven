@@ -159,7 +159,7 @@ void loop()
                         if (SETPOINT < 200) {
                                 UPPER_HEATER_PWM.setDC(0);
                         } else {
-                                UPPER_HEATER_PWM.setDC(100); 
+                                UPPER_HEATER_PWM.setDC(80); 
                         }
 
                         if ((millis() - LAST_MESSAGE_MS) > 500) {
