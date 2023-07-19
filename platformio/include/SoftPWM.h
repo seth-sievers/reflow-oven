@@ -26,7 +26,7 @@ class SoftPWM
         private: 
                 bool changed = true; 
                 unsigned short pin; 
-                unsigned short freq; 
+                float freq; 
                 unsigned short state = 1; 
                 float DutyCycle = 0; 
                 unsigned long period; 
