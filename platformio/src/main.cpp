@@ -106,7 +106,7 @@ void loop()
                         /* --------------------- PREWARM -------------------- */
                         // time of 0 tells host to send first setpoint and specifies 
                         // oven is prewarming and timer has not started
-                        if ((millis() - LAST_MESSAGE_MS) > 500) {
+                        if ((millis() - LAST_MESSAGE_MS) > 250) {
                                 sendData(0, TMP_C, SETPOINT);
                                 LAST_MESSAGE_MS = millis(); 
                         }
@@ -143,7 +143,7 @@ void loop()
                         }
                         //! -------------------------------------------------- */
 
-                        if ((millis() - LAST_MESSAGE_MS) > 500) {
+                        if ((millis() - LAST_MESSAGE_MS) > 250) {
                                 sendData((millis() - REFLOW_START_MS), 
                                         TMP_C, SETPOINT);
                                 LAST_MESSAGE_MS = millis(); 

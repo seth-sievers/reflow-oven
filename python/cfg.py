@@ -11,4 +11,6 @@ YS_TMP = [0]
 LOCK = threading.Lock()
 T1 = threading.Thread()
 CURRENT_INDEX = 0
+FEEDFORWARD_EN = True
+TMP_RISE_LIST = [] 
 # ---------------------------------------------------------------------------- #

@@ -22,11 +22,13 @@ def main():
         print('---REFLOW-HOST-SCRIPT---')
         print('Specify the complete filename for the CSV defined reflow curve')
         cfg.CSV_FILENAME = input('CSV Filename: ')
+        if (cfg.CSV_FILENAME == ''):
+                cfg.CSV_FILENAME = 'kesterEP256.csv'
         if (cfg.CSV_FILENAME[-4::] != '.csv'):
                 cfg.CSV_FILENAME += '.csv'
-        #cfg.CSV_FILENAME = 'kesterEP256.csv' #! REMOVE
 
-        # Open CSV and read into storage list pruning duplicate values
+        # Open Curve CSV and read into storage list pruning duplicate values
+        # time,temp
         with open(cfg.CSV_FILENAME, newline='') as csvfile:
                 csvreader = csv.reader(csvfile, delimiter=',')
                 last_line_time = -1
@@ -37,8 +39,21 @@ def main():
                         if ((row[0] >= 0) and (row[0] > last_line_time) and (row[1] >= 0)):
                                 cfg.SETPOINT_LIST.append(row)
                                 last_line_time = row[0]
-                print(f'Loaded {i} points of which {len(cfg.SETPOINT_LIST)} are valid.')
+                print(f'Loaded {i} curve points of which {len(cfg.SETPOINT_LIST)} are valid.')
         cfg.SETPOINT_LIST.sort(key=itemgetter(0)) #sorts based off of first element in inner tuple 
+
+        # Read tmp rise list calibration constants into list 
+        # dc,slope,delay
+        with open('tmp_rise_constants.csv', newline='') as csvfile: 
+                csvreader=csv.reader(csvfile, delimiter=',')
+                i = 0
+                for row in csvreader:
+                        i += 1
+                        row = (float(row[0]), float(row[1]), float(row[2]))
+                        cfg.TMP_RISE_LIST.append(row)
+                if (i == 0): 
+                        cfg.FEEDFORWARD_EN = False
+                print(f'Loaded {i} slope rise compensation points')
 
         # Create thread an start
         T1 = threading.Thread(target=runGraph, name='T1')
