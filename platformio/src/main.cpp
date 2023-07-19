@@ -153,8 +153,14 @@ void loop()
                         PID_CONTROLLER.Compute(); 
                         UPPER_HEATER_DC = PID_OUTPUT/2.0;
                         LOWER_HEATER_DC = PID_OUTPUT/2.0;
-                        UPPER_HEATER_PWM.setDC(UPPER_HEATER_DC);
-                        LOWER_HEATER_PWM.setDC(LOWER_HEATER_DC); 
+                        //!UPPER_HEATER_PWM.setDC(UPPER_HEATER_DC);
+                        //!LOWER_HEATER_PWM.setDC(LOWER_HEATER_DC); 
+
+                        if (SETPOINT < 200) {
+                                UPPER_HEATER_PWM.setDC(0);
+                        } else {
+                                UPPER_HEATER_PWM.setDC(100); 
+                        }
 
                         if ((millis() - LAST_MESSAGE_MS) > 500) {
                                 sendData((millis() - REFLOW_START_MS), 
