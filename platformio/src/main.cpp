@@ -138,7 +138,7 @@ void loop()
                         if (SETPOINT < 200) {
                                 HEATER_PWM.setDC(0);
                         } else {
-                                HEATER_PWM.setDC(80); 
+                                HEATER_PWM.setDC(20); 
                         }
                         //! -------------------------------------------------- */
 
