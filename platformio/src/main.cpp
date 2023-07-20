@@ -36,16 +36,15 @@ double KP = 5;
 double KI = 0;
 double KD = 0; 
 PID PID_CONTROLLER(&TMP_C, &PID_OUTPUT, &SETPOINT, KP, KI, KD, P_ON_E, DIRECT);
+float FF_DC = 0;
 
-//tmp
-bool HAS_HEATED = false; 
 /* -------------------------------------------------------------------------- */
 
 /* ----------------------------- FUNCTION_STUBS ----------------------------- */
 float sum(const float array[4]); 
-void clearBuf(char array[8]); 
-void sendData(unsigned long int time, float tmpC, float setP);
-bool isNumeric (const char array[8]);
+void clearBuf(char array[12]); 
+void sendData(unsigned long int time, float tmpC, float setP, float ff_dc);
+bool isNumeric (const char array[12]);
 /* -------------------------------------------------------------------------- */
 
 /* ---------------------------------- SETUP --------------------------------- */
@@ -107,7 +106,7 @@ void loop()
                         // time of 0 tells host to send first setpoint and specifies 
                         // oven is prewarming and timer has not started
                         if ((millis() - LAST_MESSAGE_MS) > 250) {
-                                sendData(0, TMP_C, SETPOINT);
+                                sendData(0, TMP_C, SETPOINT, FF_DC);
                                 LAST_MESSAGE_MS = millis(); 
                         }
                         if (Serial.available() > 0) {
@@ -145,7 +144,7 @@ void loop()
 
                         if ((millis() - LAST_MESSAGE_MS) > 250) {
                                 sendData((millis() - REFLOW_START_MS), 
-                                        TMP_C, SETPOINT);
+                                        TMP_C, SETPOINT, FF_DC);
                                 LAST_MESSAGE_MS = millis(); 
                         }
                         if (Serial.available() > 0) {
@@ -157,7 +156,6 @@ void loop()
                                         clearBuf(BUF); 
                                 }
                         }
-                        digitalWrite(4, HIGH); 
                         break; 
         }
 
@@ -200,13 +198,16 @@ void clearBuf(char array[12])
         return; 
 }
 
-void sendData(unsigned long int time, float tmpC, float setP)
+void sendData(unsigned long int time, float tmpC, float setP, float ff_dc)
 {
         Serial.print(time/1000.0);
         Serial.print(F(","));
         Serial.print(tmpC); 
         Serial.print(F(","));
-        Serial.println(setP);
+        Serial.print(setP);
+        Serial.print(F(","));
+        Serial.println(ff_dc); 
+        return; 
 }
 
 bool isNumeric (const char array[12])
