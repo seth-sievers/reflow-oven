@@ -132,16 +132,8 @@ void loop()
                         // by host script
                         PID_CONTROLLER.Compute(); 
                         HEATER_DC = PID_OUTPUT; //TODO: Change for Feedforward control
-                        //!HEATER_PWM.setDC(HEATER_DC);
+                        HEATER_PWM.setDC(HEATER_DC);
                         
-                        //! ----------------- IMPULSE_TESTING ---------------- */
-                        if (SETPOINT < 200) {
-                                HEATER_PWM.setDC(0);
-                        } else {
-                                HEATER_PWM.setDC(20); 
-                        }
-                        //! -------------------------------------------------- */
-
                         if ((millis() - LAST_MESSAGE_MS) > 250) {
                                 sendData((millis() - REFLOW_START_MS), 
                                         TMP_C, SETPOINT, FF_DC);
@@ -158,13 +150,6 @@ void loop()
                         }
                         break; 
         }
-
-
-
-
-
-
-
 
         // if ((millis() - test_MS) > 250){
         //         Serial.print(F("TMP: "));
