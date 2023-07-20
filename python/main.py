@@ -97,8 +97,8 @@ def main():
 
                                 # store temps and send back first set data point
                                 TMP_C = float(received[1])
-                                TMP_UPPER_C = float(received[2])
-                                TMP_LOWER_C = float(received[3])
+                                received_setpoint = float(received[2])
+                                received_ff_dc = float(received[3])
                                 cfg.XS_TMP.append(0)
                                 cfg.YS_TMP.append(TMP_C)
                                 ser.write((str(round(cfg.SETPOINT_LIST[0][1],2))+'\n').encode('ASCII'))
@@ -106,8 +106,8 @@ def main():
                                 # print to terminal
                                 if ((time.time() - last_message_s) > 5):
                                         print(f'Board: {TMP_C:.2f}°C,' \
-                                                f'   Top: {TMP_UPPER_C:.2f}°C,' \
-                                                f'   Bottom: {TMP_LOWER_C:.2f}°C')
+                                                f'   SetP: {received_setpoint:.2f}°C,' \
+                                                f'   FF_DC: {received_ff_dc:.2f}%')
                                         last_message_s = time.time()
                         else: 
                                 continue
@@ -124,8 +124,8 @@ def main():
                                 # store temps and send back interpolated set points
                                 cfg.REFLOW_TIME = float(received[0])
                                 TMP_C = float(received[1])
-                                TMP_UPPER_C = float(received[2])
-                                TMP_LOWER_C = float(received[3])
+                                received_setpoint = float(received[2])
+                                received_ff_dc = float(received[3])
                                 cfg.XS_TMP.append(cfg.REFLOW_TIME)
                                 cfg.YS_TMP.append(TMP_C)
                                 ser.write((str(round(interpolate_setpoint(),2))+'\n').encode('ASCII'))
@@ -133,8 +133,8 @@ def main():
                                 # print to terminal
                                 if ((time.time() - last_message_s) > 5):
                                         print(f'Board: {TMP_C:.2f}°C,' \
-                                                f'   Top: {TMP_UPPER_C:.2f}°C,' \
-                                                f'   Bottom: {TMP_LOWER_C:.2f}°C')
+                                                f'   SetP: {received_setpoint:.2f}°C,' \
+                                                f'   FF_DC: {received_ff_dc:.2f}%')
                                         last_message_s = time.time()
                         else: 
                                 continue
