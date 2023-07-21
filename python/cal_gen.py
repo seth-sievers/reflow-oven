@@ -28,7 +28,29 @@ ROLL_AVG_SAMPLES = 10
 
 # ---------------------------------- GLOBALS --------------------------------- #
 DATA_LIST = []
+START_DELAY = None
 CENTER_INDEX = None
+DC = None
+RIGHT_BOUNDED = False
+RIGHT_OFFSET = 0
+LEFT_BOUNDED = False
+LEFT_OFFSET = 0
+STATIC_AVERAGE = None
+# ---------------------------------------------------------------------------- #
+
+# ----------------------------------- SLOPE ---------------------------------- #
+def slope(i1, i2):
+        return ((DATA_LIST[i1][1]-DATA_LIST[i2][1])/(DATA_LIST[i1][0]-DATA_LIST[i2][0]))
+# ---------------------------------------------------------------------------- #
+
+# ------------------------------- OFFSET_VALID ------------------------------- #
+def offset_valid(i):
+        if (i > 0):
+                return ((i + CENTER_INDEX) < len(DATA_LIST))
+        elif (i < 0):
+                return ((CENTER_INDEX - i) >= 0)
+        else:
+                return True
 # ---------------------------------------------------------------------------- #
 
 # ----------------------------------- MAIN ----------------------------------- #
@@ -48,6 +70,10 @@ def main():
                                 last_line_time = row[0]
         print(f'Loaded {len(DATA_LIST)} of {i} data points.\n')
 
+        # record DC
+        DC = float(input('Enter duty cycle data was captured at: '))
+        print()
+
         # Determine the nearest index of the center point
         center_time = float(input('Enter the approximate time of center of ' \
                                         'constant slope line: '))
@@ -66,6 +92,22 @@ def main():
                                 CENTER_INDEX = i+1
         print(f'Index {CENTER_INDEX} with time of {DATA_LIST[CENTER_INDEX][0]:.2f}s' \
                 f' is closest to {center_time:.2f}s\n')
+        
+        # Record delay before impulse starts
+        START_DELAY = float(input('Enter the delay before the impulse started: '))
+        print()
+
+        # Set the offsets based off of inital ROLL_AVG_SAMPLES 
+        RIGHT_OFFSET = ROLL_AVG_SAMPLES
+        LEFT_OFFSET = -ROLL_AVG_SAMPLES
+        if ((not offset_valid(RIGHT_OFFSET)) or (not offset_valid(LEFT_OFFSET))):
+                print('Initial Offsets Not Valid')
+                raise IndexError
+
+        # Begin main computation loop
+        while ((not RIGHT_BOUNDED) and (not LEFT_BOUNDED)):
+                # Compute the current static average
+
 
 
 # ---------------------------------------------------------------------------- #
