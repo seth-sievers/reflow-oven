@@ -55,9 +55,17 @@ def offset_valid(i):
 
 # ----------------------------------- MAIN ----------------------------------- #
 def main():
+        global CENTER_INDEX
+        global DATA_LIST
+        global RIGHT_OFFSET
+        global LEFT_OFFSET
+        global START_DELAY
+        global STATIC_AVERAGE
+
         # Read in the data points and do basic validation, throwing out bad points
         # time,temp
         csv_filename = input('Enter complete path & filename to the data .csv file: ')
+        csv_filename = 'testRuns/calibrationRuns/100DC.csv'
         with open(csv_filename, newline='') as csvfile:
                 csvreader = csv.reader(csvfile, delimiter=',')
                 last_line_time = -1
@@ -71,7 +79,7 @@ def main():
         print(f'Loaded {len(DATA_LIST)} of {i} data points.\n')
 
         # record DC
-        DC = float(input('Enter duty cycle data was captured at: '))
+        DC = float(input('Enter duty cycle data was captured at (0-100): '))
         print()
 
         # Determine the nearest index of the center point
@@ -101,12 +109,24 @@ def main():
         RIGHT_OFFSET = ROLL_AVG_SAMPLES
         LEFT_OFFSET = -ROLL_AVG_SAMPLES
         if ((not offset_valid(RIGHT_OFFSET)) or (not offset_valid(LEFT_OFFSET))):
-                print('Initial Offsets Not Valid')
+                print(f'Initial Offsets of {LEFT_OFFSET} and {RIGHT_OFFSET} Not Valid')
                 raise IndexError
 
         # Begin main computation loop
         while ((not RIGHT_BOUNDED) and (not LEFT_BOUNDED)):
                 # Compute the current static average
+                tmp_slope_list = []
+                for i in range((CENTER_INDEX+LEFT_OFFSET), (RIGHT_OFFSET+CENTER_INDEX), 1):
+                        if (not offset_valid(i)):
+                                print(f'Offset {i} in main loop is not valid')
+                                raise IndexError
+                        if (not offset_valid(i+1)):
+                                print(f'Offset {i+1} in main loop is not valid')
+                                raise IndexError
+                        tmp_slope_list.append(slope(i,i+1))
+                STATIC_AVERAGE = sum(tmp_slope_list)/len(tmp_slope_list)
+                break
+        print(STATIC_AVERAGE)
 
 
 
