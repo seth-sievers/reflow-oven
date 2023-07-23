@@ -61,6 +61,7 @@ def main():
         global LEFT_OFFSET
         global START_DELAY
         global STATIC_AVERAGE
+        global DC
 
         # Read in the data points and do basic validation, throwing out bad points
         # time,temp
