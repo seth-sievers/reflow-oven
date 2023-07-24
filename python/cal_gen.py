@@ -19,10 +19,10 @@ import csv
 # ---------------------------------- CONFIG ---------------------------------- #
 # Note: Both the tolerance and Sample count determines the sensitivity
 # Specify the % tolerance in decimal form that if exceeded means the line has curved
-TOLERANCE = 0.05
+TOLERANCE = 0.2
 
 # Number of datapoints averaged together in the rolling average
-ROLL_AVG_SAMPLES = 10
+ROLL_AVG_SAMPLES = 30
 
 # ---------------------------------------------------------------------------- #
 
@@ -53,12 +53,22 @@ def offset_valid(i):
                 return True
 # ---------------------------------------------------------------------------- #
 
+# ---------------------------- COMPUTE_STATIC_AVG ---------------------------- #
+def compute_static_avg(left_index, right_index):
+        tmp_slope_list = []
+        for i in range((left_index), (right_index), 1):
+                tmp_slope_list.append(slope(i,i+1))
+        return sum(tmp_slope_list)/len(tmp_slope_list)
+# ---------------------------------------------------------------------------- #
+
 # ----------------------------------- MAIN ----------------------------------- #
 def main():
         global CENTER_INDEX
         global DATA_LIST
         global RIGHT_OFFSET
+        global RIGHT_BOUNDED
         global LEFT_OFFSET
+        global LEFT_BOUNDED
         global START_DELAY
         global STATIC_AVERAGE
         global DC
@@ -66,17 +76,19 @@ def main():
         # Read in the data points and do basic validation, throwing out bad points
         # time,temp
         csv_filename = input('Enter complete path & filename to the data .csv file: ')
-        csv_filename = 'testRuns/calibrationRuns/100DC.csv'
+        #csv_filename = 'testRuns/calibrationRuns/100DC.csv'
         with open(csv_filename, newline='') as csvfile:
                 csvreader = csv.reader(csvfile, delimiter=',')
                 last_line_time = -1
+                last_line_temp = -1
                 i = 0
                 for row in csvreader:
                         i += 1
                         row = (float(row[0]), float(row[1]))
-                        if ((row[0] >= 0) and (row[0] > last_line_time) and (row[1] >= 0)):
+                        if ((row[0] >= 0) and (row[0] > last_line_time) and (row[1] >= 0) and (row[1] != last_line_temp)):
                                 DATA_LIST.append(row)
                                 last_line_time = row[0]
+                                last_line_temp = row[1]
         print(f'Loaded {len(DATA_LIST)} of {i} data points.\n')
 
         # record DC
@@ -114,20 +126,61 @@ def main():
                 raise IndexError
 
         # Begin main computation loop
-        while ((not RIGHT_BOUNDED) and (not LEFT_BOUNDED)):
+        state = True 
+        while ((not RIGHT_BOUNDED) or (not LEFT_BOUNDED)):
                 # Compute the current static average
-                tmp_slope_list = []
-                for i in range((CENTER_INDEX+LEFT_OFFSET), (RIGHT_OFFSET+CENTER_INDEX), 1):
-                        if (not offset_valid(i)):
-                                print(f'Offset {i} in main loop is not valid')
+                STATIC_AVERAGE = compute_static_avg(CENTER_INDEX + LEFT_OFFSET, RIGHT_OFFSET + CENTER_INDEX)
+
+                # Alternate between expanding left and right side, checking if bounds have been reached
+                if (state):
+                        # Right side
+                        # increment the right index by one and compare static avg to rolling
+                        RIGHT_OFFSET += 1
+                        if (not offset_valid(RIGHT_OFFSET)):
+                                print(f'Offset {RIGHT_OFFSET} in main loop is not valid')
                                 raise IndexError
-                        if (not offset_valid(i+1)):
-                                print(f'Offset {i+1} in main loop is not valid')
+                        left_bound = (CENTER_INDEX + (RIGHT_OFFSET - ROLL_AVG_SAMPLES))
+                        right_bound = (CENTER_INDEX + RIGHT_OFFSET)
+                        roll_avg = compute_static_avg(left_bound, right_bound)
+                        print(f'T: {DATA_LIST[CENTER_INDEX+RIGHT_OFFSET][0]}, S:{STATIC_AVERAGE}, R:{roll_avg}', end=' :')
+                        if (abs((abs(STATIC_AVERAGE) - abs(roll_avg)) / STATIC_AVERAGE) <= TOLERANCE):
+                                # new index is good, keep it and then update static avg 
+                                print('Right Good')
+                                STATIC_AVERAGE = compute_static_avg(CENTER_INDEX+LEFT_OFFSET, RIGHT_OFFSET+CENTER_INDEX)
+                        else: 
+                                # new index is bad, discard it and set bounded
+                                print('Right Bad')
+                                RIGHT_OFFSET -= 1
+                                RIGHT_BOUNDED = True
+
+                        state = LEFT_BOUNDED # If left is bounded then do not switch to that state 
+                else:
+                        # Left side 
+                        # increment (decrement) left index and compare static to roll. avg
+                        LEFT_OFFSET -= 1
+                        if (not offset_valid(LEFT_OFFSET)):
+                                print(f'Offset {LEFT_OFFSET} in main loop is not valid')
                                 raise IndexError
-                        tmp_slope_list.append(slope(i,i+1))
-                STATIC_AVERAGE = sum(tmp_slope_list)/len(tmp_slope_list)
-                break
-        print(STATIC_AVERAGE)
+                        left_bound = (CENTER_INDEX + LEFT_OFFSET)
+                        right_bound = (CENTER_INDEX + LEFT_OFFSET) + ROLL_AVG_SAMPLES
+                        roll_avg = compute_static_avg(left_bound, right_bound)
+                        print(f'T: {DATA_LIST[CENTER_INDEX+LEFT_OFFSET][0]}, S:{STATIC_AVERAGE}, R:{roll_avg}', end=' :')
+                        if (abs((abs(STATIC_AVERAGE) - abs(roll_avg)) / STATIC_AVERAGE) <= TOLERANCE):
+                                # new index good, keep it and update static avg
+                                print('Left Good')
+                                STATIC_AVERAGE = compute_static_avg(CENTER_INDEX+LEFT_OFFSET, RIGHT_OFFSET+CENTER_INDEX)
+                        else:
+                                # new index is bad, discard it and set bounded
+                                print('Left Bad')
+                                LEFT_OFFSET += 1
+                                LEFT_BOUNDED = True
+                        
+                        state = not RIGHT_BOUNDED
+        print(f' Computed Average: {STATIC_AVERAGE}')
+        print('---CALIBRATION-CONSTANT---')
+        leftmost_index = CENTER_INDEX + LEFT_OFFSET
+        print(f'{DC},{STATIC_AVERAGE:.2f},{(DATA_LIST[leftmost_index][0]-START_DELAY):.2f}')
+        print('--------------------------')
 
 
 
