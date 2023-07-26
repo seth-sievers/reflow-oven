@@ -37,3 +37,39 @@ def interpolate_setpoint():
                 else: 
                         return 0 # this means our index is on the last point, heaters should be off
 # ---------------------------------------------------------------------------- #
+
+# ---------------------------------- INIT_FF --------------------------------- #\
+# initialize the loaded values and determine delay and slope range
+def init_ff():
+        minimum_slope = 100
+        maximum_slope = -1
+        minimum_delay = 1000
+        maximum_delay = -1
+        minimum_dc = 100
+        maximum_dc = 0
+        for i in cfg.TMP_RISE_LIST:
+                if (i[0] > maximum_dc):
+                        maximum_dc = i[0]
+                if (i[0] < minimum_dc): 
+                        minimum_dc = i[0]
+
+                if (i[1] > maximum_slope):
+                        maximum_slope = i[1]
+                if (i[1] < minimum_slope): 
+                        minimum_slope = i[1]
+
+                if (i[2] > maximum_delay):
+                        maximum_delay = i[2]
+                if (i[2] < minimum_delay): 
+                        minimum_delay = i[2]
+        cfg.TMP_DC_RANGE = (minimum_dc, maximum_dc)
+        cfg.TMP_SLOPE_RANGE = (minimum_slope, maximum_slope)
+        cfg.TMP_DELAY_RANGE = (minimum_delay, maximum_delay)
+        return
+# ---------------------------------------------------------------------------- #
+
+# ----------------------------- INTERPOLATE_FF_DC ---------------------------- #
+# takes in a 
+def interpolate_ff_dc(slope):
+        pass
+# ---------------------------------------------------------------------------- #

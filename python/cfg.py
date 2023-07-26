@@ -13,4 +13,7 @@ T1 = threading.Thread()
 CURRENT_INDEX = 0
 FEEDFORWARD_EN = True
 TMP_RISE_LIST = [] 
+TMP_SLOPE_RANGE = []
+TMP_DELAY_RANGE = []
+TMP_DC_RANGE = []
 # ---------------------------------------------------------------------------- #
