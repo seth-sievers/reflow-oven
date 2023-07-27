@@ -42,9 +42,9 @@ float FF_DC = 0;
 
 /* ----------------------------- FUNCTION_STUBS ----------------------------- */
 float sum(const float array[4]); 
-void clearBuf(char array[12]); 
+void clearBuf(char array[], const short LEN); 
 void sendData(unsigned long int time, float tmpC, float setP, float ff_dc);
-bool isNumeric (const char array[12]);
+bool isNumeric (const char array[], const short LEN);
 /* -------------------------------------------------------------------------- */
 
 /* ---------------------------------- SETUP --------------------------------- */
@@ -53,7 +53,7 @@ void setup()
         // Setup serial and buffer
         Serial.begin(115200);
         Serial.setTimeout(500); 
-        clearBuf(BUF); 
+        clearBuf(BUF, 12); 
 
         // Heater and Control 
         HEATER_PWM.setDC(0); 
@@ -93,11 +93,11 @@ void loop()
                                 LAST_MESSAGE_MS = millis(); 
                         }
                         if (Serial.available() > 0) {
-                                Serial.readBytesUntil('\n', BUF, 8);
+                                Serial.readBytesUntil('\n', BUF, 12);
                                 if (strcmp(BUF, "ACK") == 0) {
                                         STATE = 1; 
                                 } else {
-                                        clearBuf(BUF); 
+                                        clearBuf(BUF, 12); 
                                 }
                         }
                         break; 
@@ -110,13 +110,13 @@ void loop()
                                 LAST_MESSAGE_MS = millis(); 
                         }
                         if (Serial.available() > 0) {
-                                Serial.readBytesUntil('\n', BUF, 8);
-                                if (isNumeric(BUF)) {
+                                Serial.readBytesUntil('\n', BUF, 12);
+                                if (isNumeric(BUF, 12)) {
                                         SETPOINT = atof(BUF); 
                                         HEATER_PWM.setDC(100);
-                                        clearBuf(BUF);
+                                        clearBuf(BUF, 12);
                                 } else {
-                                        clearBuf(BUF); 
+                                        clearBuf(BUF, 12); 
                                 }
                                 if (TMP_C > SETPOINT) {
                                         HEATER_PWM.setDC(0);
@@ -140,12 +140,12 @@ void loop()
                                 LAST_MESSAGE_MS = millis(); 
                         }
                         if (Serial.available() > 0) {
-                                Serial.readBytesUntil('\n', BUF, 8);
-                                if (isNumeric(BUF)) {
+                                Serial.readBytesUntil('\n', BUF, 12);
+                                if (isNumeric(BUF, 12)) {
                                         SETPOINT = atof(BUF); 
-                                        clearBuf(BUF);
+                                        clearBuf(BUF, 12);
                                 } else {
-                                        clearBuf(BUF); 
+                                        clearBuf(BUF, 12); 
                                 }
                         }
                         break; 
@@ -174,9 +174,9 @@ float sum(const float array[4])
         return total; 
 }
 
-void clearBuf(char array[12])
+void clearBuf(char array[], const short LEN)
 {
-        for (short i = 0; i < 12; i++) 
+        for (short i = 0; i < LEN; i++) 
         {
                 array[i] = '\0'; 
         }
@@ -195,10 +195,10 @@ void sendData(unsigned long int time, float tmpC, float setP, float ff_dc)
         return; 
 }
 
-bool isNumeric (const char array[12])
+bool isNumeric (const char array[], const short LEN)
 {
         bool isANumber = false; 
-        for (short i = 0; i < 12; i++)
+        for (short i = 0; i < LEN; i++)
         {
                 if (array[i] != '\0') {
                         if (isDigit(array[i]) || ((array[i] == '.') && (i != 0))) {

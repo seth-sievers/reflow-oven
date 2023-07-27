@@ -74,6 +74,7 @@ def main():
         ser.write('ACK\n'.encode('ASCII')) # no newline added by write()
         
         prewarm_started = False
+        feedforward_started = False
         reflow_started = False
         state = 0
         reflow_active = True
@@ -112,6 +113,9 @@ def main():
                         else: 
                                 continue
                 elif (state == 1):
+                        # ---------------- FEEDFORWARD_RAMPUP ---------------- #
+                        state = 2
+                elif (state == 2):
                         # ---------------------- REFLOW ---------------------- #
                         if (not reflow_started):
                                 print('---Reflow-Started----')

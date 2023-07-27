@@ -154,5 +154,23 @@ def get_setpoint_slope(t):
 
 # ------------------------------ CALCULATE_FF_DC ----------------------------- #
 def calculate_ff_dc(): 
-        pass
+        # iterate through setpoint curve on time range of interest to determine
+        # the highest requested DC by the FF compensation curve
+        maximum_dc = 0
+        for i in range(cfg.TMP_DELAY_RANGE[0], cfg.TMP_DELAY_RANGE[1]+1, 1):
+                t = i + cfg.REFLOW_TIME
+                if ((t > cfg.SETPOINT_LIST[-1][0]) or (t < cfg.SETPOINT_LIST[0][-1])):
+                        continue
+
+                #at time t calculate the dc and then check delay to see if its valid
+                current_slope = get_setpoint_slope(t)
+                dc = interpolate_ff_dc(current_slope)
+                delay = interpolate_ff_delay(dc)
+
+                if ()
+
+
+
+
+        return maximum_dc
 # ---------------------------------------------------------------------------- #
