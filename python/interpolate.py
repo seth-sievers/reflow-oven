@@ -124,12 +124,32 @@ def interpolate_ff_dc(slope):
 
 # ----------------------------------- SLOPE ---------------------------------- #
 def slope(i1, i2):
-        return ((DATA_LIST[i1][1]-DATA_LIST[i2][1])/(DATA_LIST[i1][0]-DATA_LIST[i2][0]))
+        return ((cfg.SETPOINT_LIST[i1][1]-cfg.SETPOINT_LIST[i2][1])/ \
+                (cfg.SETPOINT_LIST[i1][0]-cfg.SETPOINT_LIST[i2][0]))
 # ---------------------------------------------------------------------------- #
 
 # ---------------------------- GET_SETPOINT_SLOPE ---------------------------- #
+# this will be horribly inefficient but should be okay(ish), index caching potential here
 def get_setpoint_slope(t):
-        pass
+        if (t > cfg.SETPOINT_LIST[-1][0]):
+                return 0
+        elif (t < cfg.SETPOINT_LIST[0][0]):
+                return 0
+        # seek through list for time
+        for i in range(len(cfg.SETPOINT_LIST)-1):
+                if (cfg.SETPOINT_LIST[i][0] == t):
+                        #handle rare instances
+                        if (i == 0): return 0 
+                        if (i > (len(cfg.SETPOINT_LIST)-2)): return 0
+                        # if on point, then return average of two nearest slopes
+                        return (sum((slope(i-1, i), slope(i, i+1)))/2)
+                elif ((cfg.SETPOINT_LIST[i][0] < t) and (cfg.SETPOINT_LIST[i+1][0] > t)):
+                        return slope(i, i+1)
+                elif (cfg.SETPOINT_LIST[i+1][0] == t):
+                        if ((i+1) == 0): return 0 
+                        if ((i+1) > (len(cfg.SETPOINT_LIST)-2)): return 0
+                        return (sum((slope(i,i+1), slope(i+1, i+2)))/2)
+        return 0
 # ---------------------------------------------------------------------------- #
 
 # ------------------------------ CALCULATE_FF_DC ----------------------------- #
