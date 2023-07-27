@@ -1,4 +1,5 @@
 import cfg
+from operator import itemgetter
 
 # -------------------------------- INTERPOLATE ------------------------------- #
 # This function will interpolate between the two nearest datapoints by drawing 
@@ -41,6 +42,7 @@ def interpolate_setpoint():
 # ---------------------------------- INIT_FF --------------------------------- #\
 # initialize the loaded values and determine delay and slope range
 def init_ff():
+        cfg.TMP_RISE_LIST.sort(key=itemgetter(0)) # sort the list based off of DC
         minimum_slope = 100
         maximum_slope = -1
         minimum_delay = 1000
@@ -68,8 +70,69 @@ def init_ff():
         return
 # ---------------------------------------------------------------------------- #
 
+# --------------------------- INTERPOLATE_FF_DELAY --------------------------- #
+def interpolate_ff_delay(dc):
+        # if out of bounds return 0
+        if ((cfg.TMP_DC_RANGE[0] > dc) or (cfg.TMP_DC_RANGE[1] < dc)):
+                return 0
+        i = 0
+        # iterate through calibration list until current points are found
+        for i in range(len(cfg.TMP_RISE_LIST)-1):
+                if (cfg.TMP_RISE_LIST[i][0] == dc):
+                        return cfg.TMP_RISE_LIST[i][2]
+                elif ((cfg.TMP_RISE_LIST[i][0] < dc) and (cfg.TMP_RISE_LIST[i+1][0] > dc)):
+                        #use linear approximation of i and i+1
+                        X1, z, Y1 = cfg.TMP_RISE_LIST[i]
+                        X2, z, Y2 = cfg.TMP_RISE_LIST[i+1]
+                        X = dc
+                        Y = (((Y1-Y2)/(X1-X2))*(X-X1)+Y1)
+                        return Y
+                elif (cfg.TMP_RISE_LIST[i+1][0] == dc):
+                        return cfg.TMP_RISE_LIST[i+1][0]
+                else:
+                        print('Error: (interpolate_ff_delay) No delay Found')
+        return 0
+# ---------------------------------------------------------------------------- #
+
 # ----------------------------- INTERPOLATE_FF_DC ---------------------------- #
-# takes in a 
 def interpolate_ff_dc(slope):
+        # handle bounds
+        if (cfg.TMP_SLOPE_RANGE[0] > slope):
+                return 0
+        elif (cfg.TMP_SLOPE_RANGE[1] < slope):
+                return cfg.TMP_DC_RANGE[1]
+        
+        # make a list of elements sorted by slope
+        slope_cal_list = sorted(cfg.TMP_RISE_LIST, key=itemgetter(1))
+
+        # iterate through interpolating between points
+        for i in range(len(slope_cal_list)-1):
+                if (slope_cal_list[i][1] == slope):
+                        return slope_cal_list[i][0]
+                elif ((slope_cal_list[i][1] < slope) and (slope_cal_list[i+1][1] > slope)):
+                        Y1, X1, = slope_cal_list[i]
+                        Y2, X2, = slope_cal_list[i+1]
+                        X = slope
+                        Y = (((Y1-Y2)/(X1-X2))*(X-X1)+Y1)
+                        return Y
+                elif (slope_cal_list[i+1][1] == slope):
+                        return slope_cal_list[i+1][1]
+                else: 
+                        print('Error: (interpolate_ff_dc) No dc found')
+        return 0
+# ---------------------------------------------------------------------------- #
+
+# ----------------------------------- SLOPE ---------------------------------- #
+def slope(i1, i2):
+        return ((DATA_LIST[i1][1]-DATA_LIST[i2][1])/(DATA_LIST[i1][0]-DATA_LIST[i2][0]))
+# ---------------------------------------------------------------------------- #
+
+# ---------------------------- GET_SETPOINT_SLOPE ---------------------------- #
+def get_setpoint_slope(t):
+        pass
+# ---------------------------------------------------------------------------- #
+
+# ------------------------------ CALCULATE_FF_DC ----------------------------- #
+def calculate_ff_dc(): 
         pass
 # ---------------------------------------------------------------------------- #
