@@ -1,5 +1,6 @@
 import cfg
 from operator import itemgetter
+import math
 
 # -------------------------------- INTERPOLATE ------------------------------- #
 # This function will interpolate between the two nearest datapoints by drawing 
@@ -89,8 +90,6 @@ def interpolate_ff_delay(dc):
                         return Y
                 elif (cfg.TMP_RISE_LIST[i+1][0] == dc):
                         return cfg.TMP_RISE_LIST[i+1][0]
-                else:
-                        print('Error: (interpolate_ff_delay) No delay Found')
         return 0
 # ---------------------------------------------------------------------------- #
 
@@ -110,15 +109,13 @@ def interpolate_ff_dc(slope):
                 if (slope_cal_list[i][1] == slope):
                         return slope_cal_list[i][0]
                 elif ((slope_cal_list[i][1] < slope) and (slope_cal_list[i+1][1] > slope)):
-                        Y1, X1, = slope_cal_list[i]
-                        Y2, X2, = slope_cal_list[i+1]
+                        Y1, X1, z = slope_cal_list[i]
+                        Y2, X2, z = slope_cal_list[i+1]
                         X = slope
                         Y = (((Y1-Y2)/(X1-X2))*(X-X1)+Y1)
                         return Y
                 elif (slope_cal_list[i+1][1] == slope):
                         return slope_cal_list[i+1][1]
-                else: 
-                        print('Error: (interpolate_ff_dc) No dc found')
         return 0
 # ---------------------------------------------------------------------------- #
 
@@ -157,7 +154,7 @@ def calculate_ff_dc():
         # iterate through setpoint curve on time range of interest to determine
         # the highest requested DC by the FF compensation curve
         maximum_dc = 0
-        for i in range(cfg.TMP_DELAY_RANGE[0], cfg.TMP_DELAY_RANGE[1]+1, 1):
+        for i in range(math.floor(cfg.TMP_DELAY_RANGE[0]), math.ceil(cfg.TMP_DELAY_RANGE[1]+1), 1):
                 t = i + cfg.REFLOW_TIME
                 if ((t > cfg.SETPOINT_LIST[-1][0]) or (t < cfg.SETPOINT_LIST[0][0])):
                         continue

@@ -14,7 +14,7 @@ import serial
 import math
 import threading
 import os
-from interpolate import interpolate_setpoint, calculate_ff_dc
+from interpolate import interpolate_setpoint, calculate_ff_dc, init_ff
 
 # ----------------------------------- MAIN ----------------------------------- #
 def main():
@@ -53,6 +53,7 @@ def main():
                         cfg.TMP_RISE_LIST.append(row)
                 if (i == 0): 
                         cfg.FEEDFORWARD_EN = False
+                init_ff()
                 print(f'Loaded {i} slope rise compensation points')
 
         # Create thread an start
