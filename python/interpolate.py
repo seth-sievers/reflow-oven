@@ -161,6 +161,7 @@ def calculate_ff_dc():
 
                 # at time t calculate the dc and then check delay to see if its valid
                 current_slope = get_setpoint_slope(t)
+                print(current_slope, end=' ')
                 dc = interpolate_ff_dc(current_slope)
                 delay = interpolate_ff_delay(dc)
 
@@ -168,5 +169,7 @@ def calculate_ff_dc():
                 if (i < delay):
                         if (dc > maximum_dc):
                                 maximum_dc = dc
+
+        print()
         return maximum_dc
 # ---------------------------------------------------------------------------- #
