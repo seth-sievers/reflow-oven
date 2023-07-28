@@ -159,18 +159,17 @@ def calculate_ff_dc():
         maximum_dc = 0
         for i in range(cfg.TMP_DELAY_RANGE[0], cfg.TMP_DELAY_RANGE[1]+1, 1):
                 t = i + cfg.REFLOW_TIME
-                if ((t > cfg.SETPOINT_LIST[-1][0]) or (t < cfg.SETPOINT_LIST[0][-1])):
+                if ((t > cfg.SETPOINT_LIST[-1][0]) or (t < cfg.SETPOINT_LIST[0][0])):
                         continue
 
-                #at time t calculate the dc and then check delay to see if its valid
+                # at time t calculate the dc and then check delay to see if its valid
                 current_slope = get_setpoint_slope(t)
                 dc = interpolate_ff_dc(current_slope)
                 delay = interpolate_ff_delay(dc)
 
-                if ()
-
-
-
-
+                # if the delay for that DC has not been reached then discard
+                if (i < delay):
+                        if (dc > maximum_dc):
+                                maximum_dc = dc
         return maximum_dc
 # ---------------------------------------------------------------------------- #

@@ -14,7 +14,7 @@ import serial
 import math
 import threading
 import os
-from interpolate import interpolate_setpoint
+from interpolate import interpolate_setpoint, calculate_ff_dc
 
 # ----------------------------------- MAIN ----------------------------------- #
 def main():
@@ -108,7 +108,8 @@ def main():
                                 if ((time.time() - last_message_s) > 5):
                                         print(f'Board: {TMP_C:.2f}°C,' \
                                                 f'   SetP: {received_setpoint:.2f}°C,' \
-                                                f'   FF_DC: {received_ff_dc:.2f}%')
+                                                f'   FF_DC: {calculate_ff_dc():.2f}%')
+                                                #f'   FF_DC: {received_ff_dc:.2f}%')
                                         last_message_s = time.time()
                         else: 
                                 continue
@@ -138,7 +139,8 @@ def main():
                                 if ((time.time() - last_message_s) > 5):
                                         print(f'Board: {TMP_C:.2f}°C,' \
                                                 f'   SetP: {received_setpoint:.2f}°C,' \
-                                                f'   FF_DC: {received_ff_dc:.2f}%')
+                                                f'   FF_DC: {calculate_ff_dc():.2f}%')
+                                                #f'   FF_DC: {received_ff_dc:.2f}%')
                                         last_message_s = time.time()
                         else: 
                                 continue
