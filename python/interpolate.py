@@ -125,6 +125,33 @@ def slope(i1, i2):
                 (cfg.SETPOINT_LIST[i1][0]-cfg.SETPOINT_LIST[i2][0]))
 # ---------------------------------------------------------------------------- #
 
+# --------------------------------- SLOPE_AVG -------------------------------- #
+def slope_avg(i):
+        # returns the average slope between 5 points on either side of the target
+        left_offset = -5
+        right_offset = 5
+        max_dt = 3
+
+        # check if bounds are valid and if not fall back on old method
+        if ((i+left_offset) < 0):
+                if ((i + 1) < len(cfg.SETPOINT_LIST)):
+                        return slope(i, i+1)
+        if ((i+right_offset) >= len(cfg.SETPOINT_LIST)):
+                if ((i + 1) < len(cfg.SETPOINT_LIST)):
+                        return slope(i, i+1)
+                
+        # fall back if 5 points L/R would average more than 3 seconds of the curve
+        if ((cfg.SETPOINT_LIST[i+right_offset][0]-cfg.SETPOINT_LIST[i+left_offset][0]) > max_dt):
+                return slope(i, i+1)
+        
+        # perform the average
+        slope_list = []
+        for j in range((i+left_offset), (i+right_offset), 1):
+                slope_list.append(slope(j, j+1))
+        return (sum(slope_list)/(right_offset-left_offset))
+
+# ---------------------------------------------------------------------------- #
+
 # ---------------------------- GET_SETPOINT_SLOPE ---------------------------- #
 # this will be horribly inefficient but should be okay(ish), index caching potential here
 def get_setpoint_slope(t):
@@ -139,13 +166,13 @@ def get_setpoint_slope(t):
                         if (i == 0): return 0 
                         if (i > (len(cfg.SETPOINT_LIST)-2)): return 0
                         # if on point, then return average of two nearest slopes
-                        return (sum((slope(i-1, i), slope(i, i+1)))/2)
+                        return (slope_avg(i))
                 elif ((cfg.SETPOINT_LIST[i][0] < t) and (cfg.SETPOINT_LIST[i+1][0] > t)):
-                        return slope(i, i+1)
+                        return slope_avg(i)
                 elif (cfg.SETPOINT_LIST[i+1][0] == t):
                         if ((i+1) == 0): return 0 
                         if ((i+1) > (len(cfg.SETPOINT_LIST)-2)): return 0
-                        return (sum((slope(i,i+1), slope(i+1, i+2)))/2)
+                        return (slope_avg(i+1))
         return 0
 # ---------------------------------------------------------------------------- #
 
