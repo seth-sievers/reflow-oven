@@ -20,6 +20,7 @@ unsigned int BUF_INDEX = 0;
 double TMP_C = 0; 
 
 char BUF[12]; // Serial Receive Buffer
+char TMP_BUF[12]; //buffer to separate input data
 
 // State machine
 short STATE = 0;
@@ -44,7 +45,9 @@ float FF_DC = 0;
 float sum(const float array[4]); 
 void clearBuf(char array[], const short LEN); 
 void sendData(unsigned long int time, float tmpC, float setP, float ff_dc);
+void sendDataSigned(long int time, float tmpC, float setP, float ff_dc);
 bool isNumeric (const char array[], const short LEN);
+void readData();
 /* -------------------------------------------------------------------------- */
 
 /* ---------------------------------- SETUP --------------------------------- */
@@ -103,10 +106,10 @@ void loop()
                         break; 
                 case 1:
                         /* --------------------- PREWARM -------------------- */
-                        // time of 0 tells host to send first setpoint and specifies 
+                        // time of <0 tells host to send first setpoint and specifies 
                         // oven is prewarming and timer has not started
                         if ((millis() - LAST_MESSAGE_MS) > 250) {
-                                sendData(0, TMP_C, SETPOINT, FF_DC);
+                                sendDataSigned(-1, TMP_C, SETPOINT, FF_DC);
                                 LAST_MESSAGE_MS = millis(); 
                         }
                         if (Serial.available() > 0) {
@@ -150,16 +153,6 @@ void loop()
                         }
                         break; 
         }
-
-        // if ((millis() - test_MS) > 250){
-        //         Serial.print(F("TMP: "));
-        //         Serial.print(TMP_C);
-        //         Serial.print(F(" TMP_UPPER: "));
-        //         Serial.print(TMP_UPPER_C);
-        //         Serial.print(F(" TMP_LOWER: "));
-        //         Serial.println(TMP_LOWER_C);
-        //         test_MS = millis(); 
-        // }
 }
 /* -------------------------------------------------------------------------- */
 
@@ -195,6 +188,18 @@ void sendData(unsigned long int time, float tmpC, float setP, float ff_dc)
         return; 
 }
 
+void sendDataSigned(long int time, float tmpC, float setP, float ff_dc)
+{
+        Serial.print(time/1000.0);
+        Serial.print(F(","));
+        Serial.print(tmpC); 
+        Serial.print(F(","));
+        Serial.print(setP);
+        Serial.print(F(","));
+        Serial.println(ff_dc); 
+        return; 
+}
+
 bool isNumeric (const char array[], const short LEN)
 {
         bool isANumber = false; 
@@ -212,6 +217,27 @@ bool isNumeric (const char array[], const short LEN)
                 }
         }
         return isANumber; 
+}
+
+void readData()
+{
+        if (Serial.available() > 0) {
+                // read entire data string into buffer
+                clearBuf(BUF, 12); 
+                Serial.readBytesUntil('\n', BUF, 12);
+                // read the setpoint from the string
+
+                for (short i = 0; i < 12; i++) 
+                {
+                        if ((BUF[i] == '\0') && (BUF[i] == '\n')) {
+                                clearBuf(BUF, 12); 
+                                return; // stop malformed data
+                        }
+                        if (BUF[i] == ',') {
+                                break; // go on to next data 
+                        }
+                }
+        }
 }
 /* -------------------------------------------------------------------------- */
 

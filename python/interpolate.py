@@ -177,14 +177,12 @@ def get_setpoint_slope(t):
                 if (cfg.SETPOINT_LIST[i][0] == t):
                         #handle rare instances
                         if (i == 0): return 0 
-                        #!if (i > (len(cfg.SETPOINT_LIST)-2)): return 0
                         # if on point, then return average of two nearest slopes
                         return (slope_avg(i))
                 elif ((cfg.SETPOINT_LIST[i][0] < t) and (cfg.SETPOINT_LIST[i+1][0] > t)):
                         return slope_avg(i)
                 elif (cfg.SETPOINT_LIST[i+1][0] == t):
                         if ((i+1) == 0): return 0 
-                        #!if ((i+1) > (len(cfg.SETPOINT_LIST)-2)): return 0
                         return (slope_avg(i+1))
         return 0
 # ---------------------------------------------------------------------------- #

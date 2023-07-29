@@ -92,9 +92,9 @@ def main():
                         received = received.replace('\r', '').replace('\n','')
                         received = received.split(',')
                         if (len(received) == 4): # cull any malformed packets
-                                if (round(float(received[0])) > 0):
+                                if (round(float(received[0])) >= 0):
                                         print('--------DONE---------')
-                                        state = 1 # if time is no longer zero it is next state
+                                        state = 1 # if time is no longer < zero it is next state
                                         continue
 
                                 # store temps and send back first set data point
@@ -109,7 +109,7 @@ def main():
                                 if ((time.time() - last_message_s) > 5):
                                         print(f'Board: {TMP_C:.2f}°C,' \
                                                 f'   SetP: {received_setpoint:.2f}°C,' \
-                                                f'   FF_DC: {calculate_ff_dc():.2f}%')
+                                                f'   FF_DC: {received_ff_dc:.2f}%')
                                                 #f'   FF_DC: {received_ff_dc:.2f}%')
                                         last_message_s = time.time()
                         else: 
