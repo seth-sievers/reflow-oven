@@ -127,10 +127,26 @@ def slope(i1, i2):
 
 # --------------------------------- SLOPE_AVG -------------------------------- #
 def slope_avg(i):
-        # returns the average slope between 5 points on either side of the target
-        left_offset = -5
-        right_offset = 5
-        max_dt = 3
+        # returns the average slope between points on either side of the target
+        max_dt = 1.5
+        
+        #calculate the offsets to achieve max_dt in either direction
+        left_offset = 0
+        right_offset = 0
+        while (((cfg.SETPOINT_LIST[i][0]-cfg.SETPOINT_LIST[i+left_offset][0] ) < max_dt) \
+                and ((left_offset-1+i) > 0)):
+                left_offset -= 1
+        else:
+                left_offset += 1
+        try:
+                while (((cfg.SETPOINT_LIST[i+right_offset][0]-cfg.SETPOINT_LIST[i][0]) < max_dt) \
+                        and ((right_offset+i+1) < (len(cfg.SETPOINT_LIST)))):
+                        right_offset += 1
+                else:
+                        right_offset -= 1
+        except:
+                print(f'i:{i}, right_offset:{right_offset}')
+                raise ValueError
 
         # check if bounds are valid and if not fall back on old method
         if ((i+left_offset) < 0):
@@ -140,9 +156,6 @@ def slope_avg(i):
                 if ((i + 1) < len(cfg.SETPOINT_LIST)):
                         return slope(i, i+1)
                 
-        # fall back if 5 points L/R would average more than 3 seconds of the curve
-        if ((cfg.SETPOINT_LIST[i+right_offset][0]-cfg.SETPOINT_LIST[i+left_offset][0]) > max_dt):
-                return slope(i, i+1)
         
         # perform the average
         slope_list = []
@@ -164,14 +177,14 @@ def get_setpoint_slope(t):
                 if (cfg.SETPOINT_LIST[i][0] == t):
                         #handle rare instances
                         if (i == 0): return 0 
-                        if (i > (len(cfg.SETPOINT_LIST)-2)): return 0
+                        #!if (i > (len(cfg.SETPOINT_LIST)-2)): return 0
                         # if on point, then return average of two nearest slopes
                         return (slope_avg(i))
                 elif ((cfg.SETPOINT_LIST[i][0] < t) and (cfg.SETPOINT_LIST[i+1][0] > t)):
                         return slope_avg(i)
                 elif (cfg.SETPOINT_LIST[i+1][0] == t):
                         if ((i+1) == 0): return 0 
-                        if ((i+1) > (len(cfg.SETPOINT_LIST)-2)): return 0
+                        #!if ((i+1) > (len(cfg.SETPOINT_LIST)-2)): return 0
                         return (slope_avg(i+1))
         return 0
 # ---------------------------------------------------------------------------- #
@@ -188,7 +201,7 @@ def calculate_ff_dc():
 
                 # at time t calculate the dc and then check delay to see if its valid
                 current_slope = get_setpoint_slope(t)
-                print(current_slope, end=' ')
+                print(f'{round(t)}: {current_slope}', end=' ')
                 dc = interpolate_ff_dc(current_slope)
                 delay = interpolate_ff_delay(dc)
 
