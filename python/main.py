@@ -80,6 +80,9 @@ def main():
         state = 0
         reflow_active = True
         last_message_s = 0
+        required_ff_time = 0
+        ff_start_time = None
+        required_ff_dc = 0
         # State Machine Governing Different Operating Modes
         while (reflow_active):
                 if (state == 0):
@@ -87,7 +90,8 @@ def main():
                         if (not prewarm_started):
                                 print('---Prewarm-Started---')
                                 prewarm_started = True
-                        # read in from serial and if properly formatted send back setpoint
+
+                        # read in from serial and if properly formatted store data
                         received = ser.readline().decode('ASCII')
                         received = received.replace('\r', '').replace('\n','')
                         received = received.split(',')
@@ -97,26 +101,73 @@ def main():
                                         state = 1 # if time is no longer < zero it is next state
                                         continue
 
-                                # store temps and send back first set data point
+                                # store temps
                                 TMP_C = float(received[1])
                                 received_setpoint = float(received[2])
                                 received_ff_dc = float(received[3])
                                 cfg.XS_TMP.append(0)
                                 cfg.YS_TMP.append(TMP_C)
-                                ser.write((str(round(cfg.SETPOINT_LIST[0][1],2))+'\n').encode('ASCII'))
-
+                                
                                 # print to terminal
                                 if ((time.time() - last_message_s) > 5):
                                         print(f'Board: {TMP_C:.2f}°C,' \
                                                 f'   SetP: {received_setpoint:.2f}°C,' \
                                                 f'   FF_DC: {received_ff_dc:.2f}%')
-                                                #f'   FF_DC: {received_ff_dc:.2f}%')
                                         last_message_s = time.time()
+
+                                # send back first setpoint and ff_dc 
+                                data_str = f'{str(round(cfg.SETPOINT_LIST[0][1],2))},{0}\n'
+                                ser.write(data_str.encode('ASCII'))
                         else: 
                                 continue
                 elif (state == 1):
                         # ---------------- FEEDFORWARD_RAMPUP ---------------- #
-                        state = 2
+                        if (not feedforward_started):
+                                print('---FeedForward-Started---')
+
+                                # Calculate time required for ff prior to starting reflow 
+                                for i in range(-cfg.TMP_DELAY_RANGE[1], 1, 1):
+                                        cfg.REFLOW_TIME = i
+                                        if (calculate_ff_dc() == 0):
+                                                continue
+                                        else:
+                                                required_ff_time = abs(i)
+                                                print(f'{required_ff_time} seconds required')
+                                                ff_start_time = time.time()
+                                                break 
+                                feedforward_started = True
+
+                        # read in from serial and if properly formatted store data
+                        received = ser.readline().decode('ASCII')
+                        received = received.replace('\r', '').replace('\n','')
+                        received = received.split(',')
+                        if (len(received) == 4): # cull any malformed packets
+                                if (round(float(received[0])) > 0):
+                                        print('--------DONE---------')
+                                        state = 2 # if time is no longer < zero it is next state
+                                        continue
+
+                                # store temps
+                                TMP_C = float(received[1])
+                                received_setpoint = float(received[2])
+                                received_ff_dc = float(received[3])
+                                cfg.XS_TMP.append(0)
+                                cfg.YS_TMP.append(TMP_C)
+                                
+                                # print to terminal 
+                                if ((time.time() - last_message_s) > 5):
+                                        print(f'Board: {TMP_C:.2f}°C,' \
+                                                f'   SetP: {received_setpoint:.2f}°C,' \
+                                                f'   FF_DC: {received_ff_dc:.2f}%')
+                                        last_message_s = time.time()
+                                
+                                # Update reflow time 
+                                cfg.REFLOW_TIME += (time.time() - ff_start_time)
+                                required_ff_dc = calculate_ff_dc()
+                                if (cfg.REFLOW_TIME >= 0):
+                                        required_ff_dc = -1
+                                data_str = f'{str(round(cfg.SETPOINT_LIST[0][1],2))},{round(required_ff_dc,2)}\n'
+                                ser.write(data_str.encode('ASCII'))
                 elif (state == 2):
                         # ---------------------- REFLOW ---------------------- #
                         if (not reflow_started):
@@ -134,14 +185,14 @@ def main():
                                 received_ff_dc = float(received[3])
                                 cfg.XS_TMP.append(cfg.REFLOW_TIME)
                                 cfg.YS_TMP.append(TMP_C)
-                                ser.write((str(round(interpolate_setpoint(),2))+'\n').encode('ASCII'))
+                                data_str = f'{str(round(interpolate_setpoint(),2))},{round(calculate_ff_dc(),2)}\n'
+                                ser.write(data_str.encode('ASCII'))
 
                                 # print to terminal
                                 if ((time.time() - last_message_s) > 5):
                                         print(f'Board: {TMP_C:.2f}°C,' \
                                                 f'   SetP: {received_setpoint:.2f}°C,' \
-                                                f'   FF_DC: {calculate_ff_dc():.2f}%')
-                                                #f'   FF_DC: {received_ff_dc:.2f}%')
+                                                f'   FF_DC: {received_ff_dc:.2f}%')
                                         last_message_s = time.time()
                         else: 
                                 continue

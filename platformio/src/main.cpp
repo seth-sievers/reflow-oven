@@ -20,7 +20,7 @@ unsigned int BUF_INDEX = 0;
 double TMP_C = 0; 
 
 char BUF[12]; // Serial Receive Buffer
-char TMP_BUF[12]; //buffer to separate input data
+char TMP_STR_BUF[12]; //buffer to separate input data
 
 // State machine
 short STATE = 0;
@@ -61,7 +61,7 @@ void setup()
         // Heater and Control 
         HEATER_PWM.setDC(0); 
         PID_CONTROLLER.SetMode(MANUAL);
-        PID_CONTROLLER.SetOutputLimits(0, 200);
+        PID_CONTROLLER.SetOutputLimits(0, 100);
         PID_CONTROLLER.SetSampleTime(500);
         
         pinMode(4, OUTPUT); 
@@ -112,45 +112,68 @@ void loop()
                                 sendDataSigned(-1, TMP_C, SETPOINT, FF_DC);
                                 LAST_MESSAGE_MS = millis(); 
                         }
-                        if (Serial.available() > 0) {
-                                Serial.readBytesUntil('\n', BUF, 12);
-                                if (isNumeric(BUF, 12)) {
-                                        SETPOINT = atof(BUF); 
-                                        HEATER_PWM.setDC(100);
-                                        clearBuf(BUF, 12);
-                                } else {
-                                        clearBuf(BUF, 12); 
-                                }
-                                if (TMP_C > SETPOINT) {
-                                        HEATER_PWM.setDC(0);
-                                        REFLOW_START_MS = millis(); 
-                                        PID_CONTROLLER.SetMode(AUTOMATIC);
-                                        STATE = 2; 
-                                }
+                        readData(); 
+                        if (SETPOINT > TMP_C) {
+                                HEATER_PWM.setDC(100); 
+                        } else {
+                                HEATER_PWM.setDC(0);
+                                STATE = 2; 
                         }
+                        // if (Serial.available() > 0) {
+                        //         Serial.readBytesUntil('\n', BUF, 12);
+                        //         if (isNumeric(BUF, 12)) {
+                        //                 SETPOINT = atof(BUF); 
+                        //                 HEATER_PWM.setDC(100);
+                        //                 clearBuf(BUF, 12);
+                        //         } else {
+                        //                 clearBuf(BUF, 12); 
+                        //         }
+                        //         if (TMP_C > SETPOINT) {
+                        //                 HEATER_PWM.setDC(0);
+                        //                 REFLOW_START_MS = millis(); 
+                        //                 PID_CONTROLLER.SetMode(AUTOMATIC);
+                        //                 STATE = 2; 
+                        //         }
+                        // }
                         break; 
                 case 2:
+                        /* --------------- FEEDFORWARD_RAMPUP --------------- */
+                        // time of 0 specifies that controller is in feedforward ramp mode
+                        // this means that the oven needs time to begin heating the
+                        // elements to fulfill the feedforward controller
+                        // once the host sends a negative ff_dc, the reflow cycle will begin
+                        if ((millis() - LAST_MESSAGE_MS) > 250) {
+                                sendDataSigned(0, TMP_C, SETPOINT, FF_DC);
+                                LAST_MESSAGE_MS = millis(); 
+                        }
+                        readData(); 
+                        if (FF_DC >= 0) {
+                                HEATER_PWM.setDC(FF_DC); 
+                        } else {
+                                HEATER_PWM.setDC(0); 
+                                REFLOW_START_MS = millis(); 
+                                PID_CONTROLLER.SetMode(AUTOMATIC);
+                                STATE = 3;  
+                        }
+                        break; 
+                case 3:
                         /* --------------------- REFLOW --------------------- */
                         // PID controller takes over and follows setpoint sent
-                        // by host script
-                        PID_CONTROLLER.Compute(); 
-                        HEATER_DC = PID_OUTPUT; //TODO: Change for Feedforward control
-                        HEATER_PWM.setDC(HEATER_DC);
-                        
+                        // by host script in combination with compensation FF controller
                         if ((millis() - LAST_MESSAGE_MS) > 250) {
                                 sendData((millis() - REFLOW_START_MS), 
                                         TMP_C, SETPOINT, FF_DC);
                                 LAST_MESSAGE_MS = millis(); 
                         }
-                        if (Serial.available() > 0) {
-                                Serial.readBytesUntil('\n', BUF, 12);
-                                if (isNumeric(BUF, 12)) {
-                                        SETPOINT = atof(BUF); 
-                                        clearBuf(BUF, 12);
-                                } else {
-                                        clearBuf(BUF, 12); 
-                                }
+                        readData(); 
+                        PID_CONTROLLER.Compute(); 
+                        // combine FF DC with PID output but clamp to 100
+                        if ((FF_DC + PID_OUTPUT) >= 100) {
+                                HEATER_DC = 100; 
+                        } else {
+                                HEATER_DC = (FF_DC + PID_OUTPUT);
                         }
+                        HEATER_PWM.setDC(HEATER_DC);
                         break; 
         }
 }
@@ -223,21 +246,54 @@ void readData()
 {
         if (Serial.available() > 0) {
                 // read entire data string into buffer
-                clearBuf(BUF, 12); 
+                clearBuf(BUF, 12);
+                clearBuf(TMP_STR_BUF, 12); 
                 Serial.readBytesUntil('\n', BUF, 12);
                 // read the setpoint from the string
-
-                for (short i = 0; i < 12; i++) 
+                short i = 0;
+                short j = 0; 
+                for (; i < 12; i++)
                 {
-                        if ((BUF[i] == '\0') && (BUF[i] == '\n')) {
-                                clearBuf(BUF, 12); 
+                        if ((BUF[i] == '\0') || (BUF[i] == '\n')) {
+                                clearBuf(BUF, 12);
+                                clearBuf(TMP_STR_BUF, 12);  
                                 return; // stop malformed data
                         }
                         if (BUF[i] == ',') {
-                                break; // go on to next data 
+                                i++; 
+                                break; // go on to ff_dc
+                        } else {
+                                TMP_STR_BUF[j] = BUF[i];
+                                j++; 
                         }
                 }
+                if (isNumeric(TMP_STR_BUF, 12)) {
+                        SETPOINT = atof(TMP_STR_BUF); 
+                }
+
+                // read the ff_dc
+                clearBuf(BUF, 12);
+                clearBuf(TMP_STR_BUF, 12); 
+                j = 0; 
+                for (; i < 12; i++) 
+                {
+                        if ((BUF[i] == '\0') || (BUF[i] == ',')) {
+                                clearBuf(BUF, 12);
+                                clearBuf(TMP_STR_BUF, 12);  
+                                return; // stop malformed data
+                        }
+                        if (BUF[i] == '\n') {
+                                break; 
+                        } else {
+                                TMP_STR_BUF[j] = BUF[i]; 
+                                j++;
+                        }
+                }
+                if (isNumeric(TMP_STR_BUF, 12)) {
+                        FF_DC = atof(TMP_STR_BUF); 
+                }
         }
+        return; 
 }
 /* -------------------------------------------------------------------------- */
 
