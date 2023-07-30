@@ -74,7 +74,9 @@ def init_ff():
 # --------------------------- INTERPOLATE_FF_DELAY --------------------------- #
 def interpolate_ff_delay(dc):
         # if out of bounds return 0
-        if ((cfg.TMP_DC_RANGE[0] > dc) or (cfg.TMP_DC_RANGE[1] < dc)):
+        if ((cfg.TMP_DC_RANGE[0] > dc)):
+                return 0
+        if (cfg.TMP_DC_RANGE[1] < dc):
                 return 0
         i = 0
         # iterate through calibration list until current points are found
@@ -89,7 +91,7 @@ def interpolate_ff_delay(dc):
                         Y = (((Y1-Y2)/(X1-X2))*(X-X1)+Y1)
                         return Y
                 elif (cfg.TMP_RISE_LIST[i+1][0] == dc):
-                        return cfg.TMP_RISE_LIST[i+1][0]
+                        return cfg.TMP_RISE_LIST[i+1][2]
         return 0
 # ---------------------------------------------------------------------------- #
 
@@ -145,7 +147,7 @@ def slope_avg(i):
                 else:
                         right_offset -= 1
         except:
-                print(f'i:{i}, right_offset:{right_offset}')
+                #!print(f'i:{i}, right_offset:{right_offset}')
                 raise ValueError
 
         # check if bounds are valid and if not fall back on old method
@@ -199,15 +201,16 @@ def calculate_ff_dc():
 
                 # at time t calculate the dc and then check delay to see if its valid
                 current_slope = get_setpoint_slope(t)
-                print(f'{round(t)}: {current_slope}', end=' ')
+                #!print(f'{round(t)}: {current_slope}', end=' ')
                 dc = interpolate_ff_dc(current_slope)
                 delay = interpolate_ff_delay(dc)
+                #!print(f'Delay is {delay:.0f}, time is {cfg.REFLOW_TIME:.0f}, i is: {i}, value is: {abs(i) < abs(delay)}')
 
                 # if the delay for that DC has not been reached then discard
-                if (i < delay):
+                if (abs(i) < abs(delay)):
                         if (dc > maximum_dc):
                                 maximum_dc = dc
 
-        print()
+        #!print()
         return maximum_dc
 # ---------------------------------------------------------------------------- #
