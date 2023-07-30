@@ -16,4 +16,7 @@ TMP_RISE_LIST = []
 TMP_SLOPE_RANGE = []
 TMP_DELAY_RANGE = []
 TMP_DC_RANGE = []
+PEAK_TMP = 75
+PEAK_TIME = 100000
+CURRENT_SETPOINT = None
 # ---------------------------------------------------------------------------- #

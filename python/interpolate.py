@@ -214,7 +214,19 @@ def calculate_ff_dc():
                         delay = 0
                 elif (approximate_setpoint < 175): 
                         delay = delay - calculated_delay_offset
+                else:
+                        # shorten delay and increase gain to help with short peak
+                        delay = delay - 1.25*calculated_delay_offset
+                        if (delay < 0): delay = 0 
+                        if (1.5*dc < 100):
+                                dc = 1.5*dc
+                        else:
+                                dc = 100
 
+                # Use this for loop to detect the peak setpoint
+                if (approximate_setpoint > cfg.PEAK_TMP):
+                        cfg.PEAK_TMP = approximate_setpoint
+                        cfg.PEAK_TIME = t
                 #!print(f'Delay is {delay:.0f}, time is {cfg.REFLOW_TIME:.0f}, i is: {i}, value is: {abs(i) < abs(delay)}')
 
                 # if the delay for that DC has not been reached then discard
@@ -222,6 +234,12 @@ def calculate_ff_dc():
                         if (dc > maximum_dc):
                                 maximum_dc = dc
 
-        #!print()
+                # disable the ff control if the peak has been crossed
+                if (cfg.REFLOW_TIME > cfg.PEAK_TIME):
+                        maximum_dc = 0
+
+        # to prevent run away from ff, disable if > 10c above current setpoint
+        if (((abs(cfg.TMP_C) - abs(cfg.CURRENT_SETPOINT)) > 5) and (cfg.REFLOW_TIME > 20)):
+                        maximum_dc = 0
         return maximum_dc
 # ---------------------------------------------------------------------------- #
