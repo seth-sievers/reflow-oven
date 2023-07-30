@@ -171,22 +171,22 @@ def slope_avg(i):
 # this will be horribly inefficient but should be okay(ish), index caching potential here
 def get_setpoint_slope(t):
         if (t > cfg.SETPOINT_LIST[-1][0]):
-                return 0
+                return (0, i)
         elif (t < cfg.SETPOINT_LIST[0][0]):
-                return 0
+                return (0, i)
         # seek through list for time
         for i in range(len(cfg.SETPOINT_LIST)-1):
                 if (cfg.SETPOINT_LIST[i][0] == t):
                         #handle rare instances
-                        if (i == 0): return 0 
+                        if (i == 0): return (0, i) 
                         # if on point, then return average of two nearest slopes
-                        return (slope_avg(i))
+                        return (slope_avg(i), i)
                 elif ((cfg.SETPOINT_LIST[i][0] < t) and (cfg.SETPOINT_LIST[i+1][0] > t)):
-                        return slope_avg(i)
+                        return (slope_avg(i), i)
                 elif (cfg.SETPOINT_LIST[i+1][0] == t):
-                        if ((i+1) == 0): return 0 
-                        return (slope_avg(i+1))
-        return 0
+                        if ((i+1) == 0): return (0, i)
+                        return (slope_avg(i+1), i)
+        return (0, i)
 # ---------------------------------------------------------------------------- #
 
 # ------------------------------ CALCULATE_FF_DC ----------------------------- #
@@ -200,10 +200,21 @@ def calculate_ff_dc():
                         continue
 
                 # at time t calculate the dc and then check delay to see if its valid
-                current_slope = get_setpoint_slope(t)
+                current_slope, slope_index = get_setpoint_slope(t)
                 #!print(f'{round(t)}: {current_slope}', end=' ')
                 dc = interpolate_ff_dc(current_slope)
                 delay = interpolate_ff_delay(dc)
+                
+                # The warmer the heater is the quicker it responds
+                # Compensate this roughly linear relation with the line calculated in
+                # 'delayCompensationCurve.xlsx'
+                approximate_setpoint = cfg.SETPOINT_LIST[slope_index][1]
+                calculated_delay_offset = 0.1366*approximate_setpoint - 7.2792
+                if ((delay - calculated_delay_offset) < 0):
+                        delay = 0
+                else: 
+                        delay = delay - calculated_delay_offset
+
                 #!print(f'Delay is {delay:.0f}, time is {cfg.REFLOW_TIME:.0f}, i is: {i}, value is: {abs(i) < abs(delay)}')
 
                 # if the delay for that DC has not been reached then discard
