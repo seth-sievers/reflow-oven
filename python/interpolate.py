@@ -212,7 +212,7 @@ def calculate_ff_dc():
                 calculated_delay_offset = 0.1366*approximate_setpoint - 7.2792
                 if ((delay - calculated_delay_offset) < 0):
                         delay = 0
-                else: 
+                elif (approximate_setpoint < 175): 
                         delay = delay - calculated_delay_offset
 
                 #!print(f'Delay is {delay:.0f}, time is {cfg.REFLOW_TIME:.0f}, i is: {i}, value is: {abs(i) < abs(delay)}')
