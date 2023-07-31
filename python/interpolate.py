@@ -92,6 +92,8 @@ def interpolate_ff_delay(dc):
                         X2, z, Y2 = cfg.TMP_RISE_LIST[i+1]
                         X = dc
                         Y = (((Y1-Y2)/(X1-X2))*(X-X1)+Y1)
+                        if (Y < cfg.TMP_DELAY_RANGE[0]): return cfg.TMP_DELAY_RANGE[0]
+                        if (Y > cfg.TMP_DELAY_RANGE[1]): return cfg.TMP_DELAY_RANGE[1]
                         return Y
                 elif (cfg.TMP_RISE_LIST[i+1][0] == dc):
                         return cfg.TMP_RISE_LIST[i+1][2]
@@ -106,7 +108,7 @@ def interpolate_ff_dc(slope):
                 #!print('lower than minimum bound')
                 return 0
         elif (cfg.TMP_SLOPE_RANGE[1] < slope):
-                print(f'returning upper bound: {cfg.TMP_DC_RANGE[1]}')
+                #!print(f'returning upper bound: {cfg.TMP_DC_RANGE[1]}')
                 return cfg.TMP_DC_RANGE[1]
         
         # make a list of elements sorted by slope
@@ -202,7 +204,8 @@ def calculate_ff_dc():
         # the highest requested DC by the FF compensation curve
         maximum_dc = 0
         dc = 0
-        for i in range(math.floor(cfg.TMP_DELAY_RANGE[0]), math.ceil(cfg.TMP_DELAY_RANGE[1]+1), 1):
+        #math.floor(cfg.TMP_DELAY_RANGE[0]) # starting from 5 onward prevents early shutoff
+        for i in range(10, math.ceil(cfg.TMP_DELAY_RANGE[1]+1), 1):
                 t = i + cfg.REFLOW_TIME
                 if ((t > cfg.SETPOINT_LIST[-1][0]) or (t < cfg.SETPOINT_LIST[0][0])):
                         continue
@@ -240,12 +243,12 @@ def calculate_ff_dc():
 
                 # if the delay for that DC has not been reached then discard
                 if (delay < 0): delay = 0
-                if (abs(i) < abs(delay)):
+                if (abs(i) < (abs(delay)+1)): # +1 so that rounding doesn't mess with result
                         if (abs(dc) > maximum_dc):
                                 maximum_dc = abs(dc)
-                else: 
-                        if (maximum_dc == 0):
-                                print(f'delay is bad: d{delay}, i{i} [{math.floor(cfg.TMP_DELAY_RANGE[0])}, {math.ceil(cfg.TMP_DELAY_RANGE[1]+1)}]')
+                #!else: 
+                        #!if (maximum_dc == 0):
+                                #!print(f'delay is bad: d{delay}, i{i} [{math.floor(cfg.TMP_DELAY_RANGE[0])}, {math.ceil(cfg.TMP_DELAY_RANGE[1]+1)}]')
 
                 # disable the ff control if the peak has been crossed
                 if ((cfg.REFLOW_TIME > cfg.PEAK_TIME) and (cfg.REFLOW_TIME > 50)):
@@ -264,7 +267,6 @@ def calculate_ff_dc():
         if (not cfg.FEEDFORWARD_EN): 
                 maximum_dc = 0
         # to prevent run away from ff, disable if > 10c above current setpoint
-
         # if peak hasn't been reached then bost until it is reached
         if (((cfg.TMP_C - cfg.PEAK_TMP) >= -5) and ((time.time() - cfg.REFLOW_TIME) > 50)):
                 cfg.HAS_REACHED_PEAK_SETPOINT = True
