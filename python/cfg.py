@@ -19,4 +19,6 @@ TMP_DC_RANGE = []
 PEAK_TMP = 75
 PEAK_TIME = 100000
 CURRENT_SETPOINT = None
+LAST_FF_STATE_CHANGE_S = 0
+HAS_REACHED_PEAK_SETPOINT = False
 # ---------------------------------------------------------------------------- #

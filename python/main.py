@@ -197,14 +197,15 @@ def main():
                                 cfg.XS_TMP.append(cfg.REFLOW_TIME)
                                 cfg.YS_TMP.append(cfg.TMP_C)
                                 cfg.CURRENT_SETPOINT = round(interpolate_setpoint(),2)
-                                data_str = f'{str(cfg.CURRENT_SETPOINT)},{round(calculate_ff_dc(),2)}\n'
+                                commanded_ff_dc = calculate_ff_dc()
+                                data_str = f'{str(cfg.CURRENT_SETPOINT)},{str(round(commanded_ff_dc,2))}\n'
                                 ser.write(data_str.encode('ASCII'))
 
                                 # print to terminal
                                 if ((time.time() - last_message_s) > 5):
                                         print(f'Board: {cfg.TMP_C:.2f}°C,' \
                                                 f'   SetP: {received_setpoint:.2f}°C,' \
-                                                f'   FF_DC: {received_ff_dc:.2f}%')
+                                                f'   FF_DC: {received_ff_dc:.2f}%, commanded FF_DC:{commanded_ff_dc:.2f}')
                                         last_message_s = time.time()
                         else: 
                                 continue

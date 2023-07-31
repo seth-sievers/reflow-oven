@@ -1,6 +1,7 @@
 import cfg
 from operator import itemgetter
 import math
+import time
 
 # -------------------------------- INTERPOLATE ------------------------------- #
 # This function will interpolate between the two nearest datapoints by drawing 
@@ -49,7 +50,7 @@ def init_ff():
         minimum_delay = 1000
         maximum_delay = -1
         minimum_dc = 100
-        maximum_dc = 0
+        maximum_dc = -1
         for i in cfg.TMP_RISE_LIST:
                 if (i[0] > maximum_dc):
                         maximum_dc = i[0]
@@ -75,8 +76,10 @@ def init_ff():
 def interpolate_ff_delay(dc):
         # if out of bounds return 0
         if ((cfg.TMP_DC_RANGE[0] > dc)):
+                #!print('lower than dc bound')
                 return 0
         if (cfg.TMP_DC_RANGE[1] < dc):
+                #!print('higher than dc bound')
                 return 0
         i = 0
         # iterate through calibration list until current points are found
@@ -92,6 +95,7 @@ def interpolate_ff_delay(dc):
                         return Y
                 elif (cfg.TMP_RISE_LIST[i+1][0] == dc):
                         return cfg.TMP_RISE_LIST[i+1][2]
+        #!print('defaulting to zero')
         return 0
 # ---------------------------------------------------------------------------- #
 
@@ -99,8 +103,10 @@ def interpolate_ff_delay(dc):
 def interpolate_ff_dc(slope):
         # handle bounds
         if (cfg.TMP_SLOPE_RANGE[0] > slope):
+                #!print('lower than minimum bound')
                 return 0
         elif (cfg.TMP_SLOPE_RANGE[1] < slope):
+                print(f'returning upper bound: {cfg.TMP_DC_RANGE[1]}')
                 return cfg.TMP_DC_RANGE[1]
         
         # make a list of elements sorted by slope
@@ -118,6 +124,7 @@ def interpolate_ff_dc(slope):
                         return Y
                 elif (slope_cal_list[i+1][1] == slope):
                         return slope_cal_list[i+1][1]
+        #!print('none found, defaulting')
         return 0
 # ---------------------------------------------------------------------------- #
 
@@ -194,6 +201,7 @@ def calculate_ff_dc():
         # iterate through setpoint curve on time range of interest to determine
         # the highest requested DC by the FF compensation curve
         maximum_dc = 0
+        dc = 0
         for i in range(math.floor(cfg.TMP_DELAY_RANGE[0]), math.ceil(cfg.TMP_DELAY_RANGE[1]+1), 1):
                 t = i + cfg.REFLOW_TIME
                 if ((t > cfg.SETPOINT_LIST[-1][0]) or (t < cfg.SETPOINT_LIST[0][0])):
@@ -203,8 +211,10 @@ def calculate_ff_dc():
                 current_slope, slope_index = get_setpoint_slope(t)
                 #!print(f'{round(t)}: {current_slope}', end=' ')
                 dc = interpolate_ff_dc(current_slope)
+                if (dc > 100):
+                        dc = 100
                 delay = interpolate_ff_delay(dc)
-                
+
                 # The warmer the heater is the quicker it responds
                 # Compensate this roughly linear relation with the line calculated in
                 # 'delayCompensationCurve.xlsx'
@@ -216,13 +226,12 @@ def calculate_ff_dc():
                         delay = delay - calculated_delay_offset
                 else:
                         # shorten delay and increase gain to help with short peak
-                        delay = delay - 1.25*calculated_delay_offset
+                        delay = delay - 0.75*calculated_delay_offset
                         if (delay < 0): delay = 0 
                         if (1.5*dc < 100):
                                 dc = 1.5*dc
                         else:
                                 dc = 100
-
                 # Use this for loop to detect the peak setpoint
                 if (approximate_setpoint > cfg.PEAK_TMP):
                         cfg.PEAK_TMP = approximate_setpoint
@@ -230,16 +239,37 @@ def calculate_ff_dc():
                 #!print(f'Delay is {delay:.0f}, time is {cfg.REFLOW_TIME:.0f}, i is: {i}, value is: {abs(i) < abs(delay)}')
 
                 # if the delay for that DC has not been reached then discard
+                if (delay < 0): delay = 0
                 if (abs(i) < abs(delay)):
-                        if (dc > maximum_dc):
-                                maximum_dc = dc
+                        if (abs(dc) > maximum_dc):
+                                maximum_dc = abs(dc)
+                else: 
+                        if (maximum_dc == 0):
+                                print(f'delay is bad: d{delay}, i{i} [{math.floor(cfg.TMP_DELAY_RANGE[0])}, {math.ceil(cfg.TMP_DELAY_RANGE[1]+1)}]')
 
                 # disable the ff control if the peak has been crossed
-                if (cfg.REFLOW_TIME > cfg.PEAK_TIME):
+                if ((cfg.REFLOW_TIME > cfg.PEAK_TIME) and (cfg.REFLOW_TIME > 50)):
                         maximum_dc = 0
 
+        if ((time.time() - cfg.LAST_FF_STATE_CHANGE_S) > 2):
+                if (((abs(cfg.TMP_C) - abs(cfg.CURRENT_SETPOINT)) > 10) and (cfg.REFLOW_TIME > 20)):
+                        if (cfg.FEEDFORWARD_EN):
+                                cfg.LAST_FF_STATE_CHANGE_S = time.time()
+                                cfg.FEEDFORWARD_EN = False
+                else:
+                        if (not cfg.FEEDFORWARD_EN):
+                                cfg.FEEDFORWARD_EN = True
+                                cfg.LAST_FF_STATE_CHANGE_S = time.time()
+
+        if (not cfg.FEEDFORWARD_EN): 
+                maximum_dc = 0
         # to prevent run away from ff, disable if > 10c above current setpoint
-        if (((abs(cfg.TMP_C) - abs(cfg.CURRENT_SETPOINT)) > 5) and (cfg.REFLOW_TIME > 20)):
-                        maximum_dc = 0
+
+        # if peak hasn't been reached then bost until it is reached
+        if (((cfg.TMP_C - cfg.PEAK_TMP) >= -5) and ((time.time() - cfg.REFLOW_TIME) > 50)):
+                cfg.HAS_REACHED_PEAK_SETPOINT = True
+        if (not(cfg.HAS_REACHED_PEAK_SETPOINT) and (cfg.PEAK_TIME < cfg.REFLOW_TIME) and ((time.time() - cfg.REFLOW_TIME) > 50)):
+                maximum_dc = 100
+
         return maximum_dc
 # ---------------------------------------------------------------------------- #
