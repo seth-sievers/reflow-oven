@@ -6,7 +6,7 @@ Purpose: This script is to be used alongside an arduino script to control and
 '''
 
 import cfg
-from graphing import runGraph
+#from graphing import runGraph #!
 import time
 import csv
 from operator import itemgetter
@@ -15,17 +15,21 @@ import math
 import threading
 import os
 from interpolate import interpolate_setpoint, calculate_ff_dc, init_ff
+from gui import run_gui
 
 # ----------------------------------- MAIN ----------------------------------- #
 def main():
         # Get CSV name and verify extension
         print('---REFLOW-HOST-SCRIPT---')
-        print('Specify the complete filename for the CSV defined reflow curve')
-        cfg.CSV_FILENAME = input('CSV Filename: ')
+        #print('Specify the complete filename for the CSV defined reflow curve')
+        #cfg.CSV_FILENAME = input('CSV Filename: ')
+        cfg.CSV_FILENAME = '' #! 
         if (cfg.CSV_FILENAME == ''):
                 cfg.CSV_FILENAME = 'kesterEP256.csv'
         if (cfg.CSV_FILENAME[-4::] != '.csv'):
                 cfg.CSV_FILENAME += '.csv'
+
+        print(cfg.CSV_FILENAME)
 
         # Open Curve CSV and read into storage list pruning duplicate values
         # time,temp
@@ -56,8 +60,8 @@ def main():
                 init_ff()
                 print(f'Loaded {i} slope rise compensation points')
 
-        # Create thread an start
-        T1 = threading.Thread(target=runGraph, name='T1')
+        # Create thread and start
+        T1 = threading.Thread(target=run_gui, name='T1')
         T1.start()
 
         # Open the Serial Port and wait for 'READY'

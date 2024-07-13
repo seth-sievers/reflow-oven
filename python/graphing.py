@@ -32,7 +32,7 @@ def runGraph():
                 ys_sp.append(k[1])
         setpoint_line, = ax.plot(xs_sp, ys_sp, color='xkcd:purple', linestyle=':')
 
-        #create temp line
+        # create temp line
         cfg.LOCK.acquire()
         tmp_line, = ax.plot(cfg.XS_TMP, cfg.YS_TMP, color='xkcd:red', linestyle='solid')
         cfg.LOCK.release()
