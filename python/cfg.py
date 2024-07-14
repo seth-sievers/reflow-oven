@@ -21,4 +21,12 @@ PEAK_TIME = 100000
 CURRENT_SETPOINT = None
 LAST_FF_STATE_CHANGE_S = 0
 HAS_REACHED_PEAK_SETPOINT = False
+SERIAL_PORT_LIST = []
+COM_PORT_LOCK = threading.Lock()
+SELECTED_SERIAL_PORT = ''
+TO_CONNECT = False
+TO_START = False
+LOG_LOCK = threading.Lock()
+LOG_BUF = []
+REFLOW_ACTIVE = True
 # ---------------------------------------------------------------------------- #

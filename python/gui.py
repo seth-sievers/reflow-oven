@@ -10,12 +10,12 @@ import threading
 import warnings
 from operator import itemgetter
 import math
+import serial
+import serial.tools.list_ports
 
 class App(ttk.Frame):
         def __init__(self, parent):
                 super().__init__(parent, padding=15)
-                # self.parent = parent
-                # self.resize_handler = None
 
                 # configure the grid, 1x2
                 self.columnconfigure(0, weight=1) # set the other elements to 1x wider
@@ -52,19 +52,63 @@ class ComPort(ttk.LabelFrame):
                 self.columnconfigure(1, weight=1) # box for scan button
                 self.rowconfigure(0, weight=1)
 
-                # place the entry box
-                combo_values = ['test1', 'test2', 'test3']
-                self.com_select_box = ttk.Combobox(self, state='readonly', values=combo_values)
-                self.com_select_box.current(0)
+                # place the com select box 
+                self.com_select_box = ttk.Combobox(self, state='readonly')
+                self.scan()
                 self.com_select_box.grid(row=0, column=0, padx=0, pady=0, sticky='ew')
+                self.com_select_box.bind("<<ComboboxSelected>>", self.update_selected)
 
                 # place the scan button 
-                self.scan_button = ttk.Button(self, text='Scan')
+                self.scan_button = ttk.Button(self, text='Scan', command=self.scan)
                 self.scan_button.grid(row=0, column=1, padx=0, pady=0)
+        
+        def scan(self):
+                # get a list of all com ports 
+                iterator = serial.tools.list_ports.comports()
+                self.com_port_dev = ['<select>']
+                self.com_port_descriptions = ['<select>']
+                for x in iterator: 
+                        self.com_port_dev.append(x.device)
+                        self.com_port_descriptions.append(x.description)
+
+                addToLog(f'Found {len(self.com_port_dev)-1} COM Port(s)')
+
+                # update the entries
+                combo_values = [f'{device}, {description}' for device, description in zip(self.com_port_dev, self.com_port_descriptions)]
+                self.com_select_box['values'] = combo_values
+
+                # if one matches the name of oven, switch to it
+                reflow_oven_id = 'USB-SERIAL CH340'
+                i = None
+                for i, x in enumerate(combo_values):
+                        if reflow_oven_id in x:
+                                self.com_select_box.current(i)
+                                break 
+                        else: 
+                                self.com_select_box.current(0)
+                                i = 0
+                cfg.COM_PORT_LOCK.acquire()
+                cfg.SELECTED_SERIAL_PORT = self.com_port_dev[i]
+                cfg.COM_PORT_LOCK.release() 
+                addToLog(f'{self.com_port_dev[i]} Selected')
+                return
+        
+        def update_selected(self, event):
+                for i, x in enumerate(self.com_port_dev):
+                        if x in self.com_select_box.get():
+                                # i is the correct index
+                                cfg.COM_PORT_LOCK.acquire()
+                                cfg.SELECTED_SERIAL_PORT = x
+                                cfg.COM_PORT_LOCK.release() 
+                                addToLog(f'{x} Selected')
+                                break 
+                return 
+
 
 class Log(ttk.LabelFrame):
         def __init__(self, parent):
                 super().__init__(parent, text='Log', padding = 15)
+                self.parent = parent
 
                 # create a scrollbar and add to right side of 
                 self.log_scrollbar = ttk.Scrollbar(self)
@@ -77,12 +121,29 @@ class Log(ttk.LabelFrame):
                 # configure the scrollbar to move the box
                 self.log_scrollbar.config(command=self.log_text.yview)
 
-                #! add some placehold entries
-                for i in range(100):
-                        self.log_text.insert('end', f'Log #{i}\n')
+                # configure the task that will update the log
+                self.parent.after(200, self.update_log)
                 
                 # disable the textbox so it cannot be edited through gui 
                 self.log_text.config(state='disabled')
+        
+        def update_log(self):
+                # enable the textbox so it can be edited 
+                self.log_text.config(state='normal')
+
+                # if the log buffer has entries add them to the log
+                cfg.LOG_LOCK.acquire()
+                if (len(cfg.LOG_BUF) > 0):
+                        for x in cfg.LOG_BUF:
+                                self.log_text.insert(tk.END, x)
+                        cfg.LOG_BUF = [] # make it empty
+                cfg.LOG_LOCK.release()
+
+                # disable the textbox 
+                self.log_text.config(state='disabled')
+
+                self.parent.after(200, self.update_log)
+                return 
 
 class ControlButtons(ttk.Frame):
         def __init__(self, parent):
@@ -94,12 +155,24 @@ class ControlButtons(ttk.Frame):
                 self.rowconfigure(0, weight=1)
 
                 # create the connect button 
-                self.connect_button = ttk.Button(self, text='Connect')
+                self.connect_button = ttk.Button(self, text='Connect', command=self.connect)
                 self.connect_button.grid(row=0, column=0, padx=0, pady=0)
 
                 # create the start button 
-                self.start_button = ttk.Button(self, text='Start', style='Accent.TButton')
+                self.start_button = ttk.Button(self, text='Start', style='Accent.TButton', command=self.start)
                 self.start_button.grid(row=0, column=1, padx=0, pady=0, sticky='ew')
+        
+        def connect(self):
+                cfg.COM_PORT_LOCK.acquire()
+                cfg.TO_CONNECT = True
+                cfg.COM_PORT_LOCK.release()
+                return 
+        
+        def start(self):
+                cfg.COM_PORT_LOCK.acquire()
+                cfg.TO_START = True
+                cfg.COM_PORT_LOCK.release()
+                return 
 
 class Graph(ttk.Frame):
         def __init__(self, parent):
@@ -155,7 +228,7 @@ class Graph(ttk.Frame):
                 self.canvas_widget = self.canvas.get_tk_widget()
                 self.canvas_widget.pack(fill=tk.BOTH, expand=True)
 
-                #Create the animation that will update the plot during runtime
+                # Create the animation that will update the plot during runtime
                 self.ani = FuncAnimation(self.fig, self.update, interval=100, 
                                         cache_frame_data=False, blit=True)
                 
@@ -166,12 +239,21 @@ class Graph(ttk.Frame):
                 cfg.LOCK.release()
                 return self.tmp_line, 
 
+def addToLog(message: str, end='\n'):
+        # both print the message to console and add to the log box queue
+        print(message, end=end)
+        cfg.LOG_LOCK.acquire()
+        cfg.LOG_BUF.append(message + end)
+        cfg.LOG_LOCK.release()
+        return
+
 def run_gui():
         root = tk.Tk()
         root.title('Reflow Oven GUI')
         sv_ttk.set_theme('light')
         App(root).pack(expand=True, fill = 'both')
         root.mainloop()
+        cfg.REFLOW_ACTIVE = False
         return 
 
 def main():

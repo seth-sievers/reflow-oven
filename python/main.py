@@ -11,17 +11,22 @@ import time
 import csv
 from operator import itemgetter
 import serial
+import serial.tools.list_ports
 import math
 import threading
 import os
 from interpolate import interpolate_setpoint, calculate_ff_dc, init_ff
-from gui import run_gui
+from gui import run_gui, addToLog
 
 # ----------------------------------- MAIN ----------------------------------- #
 def main():
+        # Create GUI thread and start
+        T1 = threading.Thread(target=run_gui, name='T1')
+        T1.start()
+
         # Get CSV name and verify extension
-        print('---REFLOW-HOST-SCRIPT---')
-        #print('Specify the complete filename for the CSV defined reflow curve')
+        addToLog('---REFLOW-HOST-SCRIPT---')
+        #addToLog('Specify the complete filename for the CSV defined reflow curve')
         #cfg.CSV_FILENAME = input('CSV Filename: ')
         cfg.CSV_FILENAME = '' #! 
         if (cfg.CSV_FILENAME == ''):
@@ -29,7 +34,7 @@ def main():
         if (cfg.CSV_FILENAME[-4::] != '.csv'):
                 cfg.CSV_FILENAME += '.csv'
 
-        print(cfg.CSV_FILENAME)
+        addToLog(cfg.CSV_FILENAME)
 
         # Open Curve CSV and read into storage list pruning duplicate values
         # time,temp
@@ -43,7 +48,7 @@ def main():
                         if ((row[0] >= 0) and (row[0] > last_line_time) and (row[1] >= 0)):
                                 cfg.SETPOINT_LIST.append(row)
                                 last_line_time = row[0]
-                print(f'Loaded {i} curve points of which {len(cfg.SETPOINT_LIST)} are valid.')
+                addToLog(f'Loaded {i} curve points of which {len(cfg.SETPOINT_LIST)} are valid.')
         cfg.SETPOINT_LIST.sort(key=itemgetter(0)) #sorts based off of first element in inner tuple 
 
         # Read tmp rise list calibration constants into list 
@@ -58,29 +63,44 @@ def main():
                 if (i == 0): 
                         cfg.FEEDFORWARD_EN = False
                 init_ff()
-                print(f'Loaded {i} slope rise compensation points')
+                addToLog(f'Loaded {i} slope rise compensation points')
 
-        # Create thread and start
-        T1 = threading.Thread(target=run_gui, name='T1')
-        T1.start()
+        # while True:
+        #         time.sleep(1)
+        #         addToLog('sleeping')
+        #         if (not cfg.REFLOW_ACTIVE):
+        #                 return 
 
-        # Open the Serial Port and wait for 'READY'
-        ser = serial.Serial('COM4', 115200, timeout=1)
-        print('Waiting for Connection...', end='')
-        connection_start_time = time.time()
-        while (ser.readline().decode('ASCII') != 'READY\r\n'):
-                if ((time.time() - connection_start_time) > 15):
-                        print('TIMEOUT')
-                        break
-        else: 
-                print('READY')
+        # Attempt a connection
+        reflow_started = False
+        ser = None
+        connection_start_time = None
+        while (not reflow_started):
+                cfg.COM_PORT_LOCK.acquire()
+                if (cfg.TO_CONNECT):
+                        # Attempt a connection 
+                        try: 
+                                ser = serial.Serial(cfg.SELECTED_SERIAL_PORT, 115200, timeout=1)
+                                addToLog('Waiting for Connection...', end='')
+                                connection_start_time = time.time()
+                                while (ser.readline().decode('ASCII') != 'READY\r\n'):
+                                        if ((time.time() - connection_start_time) > 15):
+                                                addToLog('TIMEOUT')
+                                                break
+                                else: 
+                                        addToLog('READY')
+                                        reflow_started = True
+                        except Exception as e:
+                                addToLog(f'Error Occurred: {e}')
+                        cfg.TO_CONNECT = False
+                cfg.COM_PORT_LOCK.release()
+                time.sleep(0.1)
 
         input('PRESS ENTER TO BEGIN REFLOW:')
         ser.write('ACK\n'.encode('ASCII')) # no newline added by write()
         
         prewarm_started = False
         feedforward_started = False
-        reflow_started = False
         state = 0
         reflow_active = True
         last_message_s = 0
@@ -89,11 +109,11 @@ def main():
         ff_time = 0
         required_ff_dc = 0
         # State Machine Governing Different Operating Modes
-        while (reflow_active):
+        while (cfg.REFLOW_ACTIVE):
                 if (state == 0):
                         # --------------------- PREWARMNG -------------------- #
                         if (not prewarm_started):
-                                print('---Prewarm-Started---')
+                                addToLog('---Prewarm-Started---')
                                 prewarm_start_time = time.time()
                                 prewarm_started = True
 
@@ -105,7 +125,7 @@ def main():
                                 #lock out staging logic to allow initialization of values
                                 if ((time.time() - prewarm_start_time) > 0.5):
                                         if (round(float(received[0])) >= 0):
-                                                print('--------DONE---------')
+                                                addToLog('--------DONE---------')
                                                 state = 1 # if time is no longer < zero it is next state
                                                 continue
 
@@ -118,7 +138,7 @@ def main():
                                 
                                 # print to terminal
                                 if ((time.time() - last_message_s) > 5):
-                                        print(f'Board: {cfg.TMP_C:.2f}°C,' \
+                                        addToLog(f'Board: {cfg.TMP_C:.2f}°C,' \
                                                 f'   SetP: {received_setpoint:.2f}°C,' \
                                                 f'   FF_DC: {received_ff_dc:.2f}%')
                                         last_message_s = time.time()
@@ -132,7 +152,7 @@ def main():
                 elif (state == 1):
                         # ---------------- FEEDFORWARD_RAMPUP ---------------- #
                         if (not feedforward_started):
-                                print('---FeedForward-Started---')
+                                addToLog('---FeedForward-Started---')
 
                                 # Calculate time required for ff prior to starting reflow 
                                 for i in range(math.floor(-cfg.TMP_DELAY_RANGE[1]), 1, 1):
@@ -141,11 +161,11 @@ def main():
                                                 continue
                                         else:
                                                 required_ff_time = abs(i)
-                                                print(f'{required_ff_time} seconds required')
+                                                addToLog(f'{required_ff_time} seconds required')
                                                 ff_time = time.time()
                                                 break
                                 if (required_ff_time == 0):
-                                        print(f'{required_ff_time} seconds required')
+                                        addToLog(f'{required_ff_time} seconds required')
                                         ff_time = time.time()
                                 feedforward_started = True
 
@@ -155,7 +175,7 @@ def main():
                         received = received.split(',')
                         if (len(received) == 4): # cull any malformed packets
                                 if (round(float(received[0])) > 0):
-                                        print('--------DONE---------')
+                                        addToLog('--------DONE---------')
                                         state = 2 # if time is no longer < zero it is next state
                                         continue
 
@@ -168,7 +188,7 @@ def main():
                                 
                                 # print to terminal 
                                 if ((time.time() - last_message_s) > 5):
-                                        print(f'Board: {cfg.TMP_C:.2f}°C,' \
+                                        addToLog(f'Board: {cfg.TMP_C:.2f}°C,' \
                                                 f'   SetP: {received_setpoint:.2f}°C,' \
                                                 f'   FF_DC: {received_ff_dc:.0f}%')
                                         last_message_s = time.time()
@@ -181,12 +201,12 @@ def main():
                                         required_ff_dc = -1
                                 cfg.CURRENT_SETPOINT = round(cfg.SETPOINT_LIST[0][1],2)
                                 data_str = f'{str(cfg.CURRENT_SETPOINT)},{round(required_ff_dc,2)}\n'
-                                #!print(f'T:{cfg.REFLOW_TIME:.0f}, {required_ff_dc:.0f}')
+                                #!addToLog(f'T:{cfg.REFLOW_TIME:.0f}, {required_ff_dc:.0f}')
                                 ser.write(data_str.encode('ASCII'))
                 elif (state == 2):
                         # ---------------------- REFLOW ---------------------- #
                         if (not reflow_started):
-                                print('---Reflow-Started----')
+                                addToLog('---Reflow-Started----')
                                 reflow_started = True
                         # read in from serial and if properly formatted send back setpoint
                         received = ser.readline().decode('ASCII')
@@ -207,7 +227,7 @@ def main():
 
                                 # print to terminal
                                 if ((time.time() - last_message_s) > 5):
-                                        print(f'Board: {cfg.TMP_C:.2f}°C,' \
+                                        addToLog(f'Board: {cfg.TMP_C:.2f}°C,' \
                                                 f'   SetP: {received_setpoint:.2f}°C,' \
                                                 f'   FF_DC: {received_ff_dc:.2f}%, commanded FF_DC:{commanded_ff_dc:.2f}')
                                         last_message_s = time.time()
