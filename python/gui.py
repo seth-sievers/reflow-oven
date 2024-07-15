@@ -12,6 +12,7 @@ from operator import itemgetter
 import math
 import serial
 import serial.tools.list_ports
+import time
 
 class App(ttk.Frame):
         def __init__(self, parent):
@@ -149,6 +150,9 @@ class ControlButtons(ttk.Frame):
         def __init__(self, parent):
                 super().__init__(parent, style="Card.TFrame", padding=15)
 
+                self.last_start_time = time.time() 
+                self.has_activated = False
+
                 # configure the grid 
                 self.columnconfigure(0, weight=1) # connect button
                 self.columnconfigure(1, weight=4) # start button 
@@ -169,9 +173,23 @@ class ControlButtons(ttk.Frame):
                 return 
         
         def start(self):
-                cfg.COM_PORT_LOCK.acquire()
-                cfg.TO_START = True
-                cfg.COM_PORT_LOCK.release()
+                if ((time.time() - self.last_start_time) > 1):
+                        cfg.ACTIVE_LOCK.acquire()
+                        if (cfg.REFLOW_ACTIVE):
+                                # already active, disable
+                                cfg.REFLOW_ACTIVE = False
+                                addToLog('Disabling')
+                        else:
+                                # need to activate
+                                cfg.COM_PORT_LOCK.acquire()
+                                if ((not self.has_activated) and cfg.HAS_CONNECTED):
+                                        cfg.REFLOW_ACTIVE = True
+                                        self.has_activated = True 
+                                        addToLog('Activating')
+                                else: 
+                                        addToLog('Not Activating')
+                                cfg.COM_PORT_LOCK.release()
+                        cfg.ACTIVE_LOCK.release()
                 return 
 
 class Graph(ttk.Frame):
@@ -254,6 +272,10 @@ def run_gui():
         App(root).pack(expand=True, fill = 'both')
         root.mainloop()
         cfg.REFLOW_ACTIVE = False
+        cfg.END_LOCK.acquire() 
+        cfg.TO_END = True 
+        cfg.END_LOCK.release() 
+        
         return 
 
 def main():

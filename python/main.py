@@ -21,8 +21,8 @@ from gui import run_gui, addToLog
 # ----------------------------------- MAIN ----------------------------------- #
 def main():
         # Create GUI thread and start
-        T1 = threading.Thread(target=run_gui, name='T1')
-        T1.start()
+        cfg.T1 = threading.Thread(target=run_gui, name='T1')
+        cfg.T1.start()
 
         # Get CSV name and verify extension
         addToLog('---REFLOW-HOST-SCRIPT---')
@@ -90,13 +90,25 @@ def main():
                                 else: 
                                         addToLog('READY')
                                         reflow_started = True
+                                        #cfg.REFLOW_ACTIVE = True 
+                                        cfg.HAS_CONNECTED = True
                         except Exception as e:
                                 addToLog(f'Error Occurred: {e}')
                         cfg.TO_CONNECT = False
                 cfg.COM_PORT_LOCK.release()
                 time.sleep(0.1)
 
-        input('PRESS ENTER TO BEGIN REFLOW:')
+        addToLog('PRESS START TO BEGIN REFLOW:')
+
+        # wait to begin
+        to_begin = False
+        while (not to_begin):
+                cfg.ACTIVE_LOCK.acquire()
+                if (cfg.REFLOW_ACTIVE):
+                        to_begin = True
+                cfg.ACTIVE_LOCK.release() 
+                time.sleep(0.1) 
+
         ser.write('ACK\n'.encode('ASCII')) # no newline added by write()
         
         prewarm_started = False
@@ -109,7 +121,12 @@ def main():
         ff_time = 0
         required_ff_dc = 0
         # State Machine Governing Different Operating Modes
-        while (cfg.REFLOW_ACTIVE):
+        while (reflow_active):
+                cfg.ACTIVE_LOCK.acquire()
+                if (not cfg.REFLOW_ACTIVE):
+                        reflow_active = False
+                cfg.ACTIVE_LOCK.release() 
+                time.sleep(0.05) # reduce cpu load 
                 if (state == 0):
                         # --------------------- PREWARMNG -------------------- #
                         if (not prewarm_started):
@@ -233,14 +250,19 @@ def main():
                                         last_message_s = time.time()
                         else: 
                                 continue
+        else: 
+                # when reflow is ended
+                data_str = f'{str(0.00)},{str(0.00)}\n'
+                ser.write(data_str.encode('ASCII'))
+
         
         ser.close()
-        T1.join()
         return
 # ---------------------------------------------------------------------------- #
 
 ##########################
 if __name__ == '__main__':
         main()
+        cfg.T1.join()
         os._exit(0)
 ##########################
